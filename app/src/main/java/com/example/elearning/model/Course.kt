@@ -14,12 +14,6 @@ data class Course(
     val lessons: List<Lesson> = emptyList()
 )
 
-data class CourseSection(
-    val id: String,
-    val title: String,
-    val lessons: List<String>
-)
-
 data class Lesson(
     val id: String,
     val title: String,

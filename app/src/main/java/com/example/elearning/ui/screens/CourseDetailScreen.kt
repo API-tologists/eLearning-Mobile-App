@@ -48,10 +48,32 @@ fun CourseDetailScreen(
                 Lesson("2", "Variables and Types", "45 min", "https://example.com/video2", false),
                 Lesson("3", "Control Flow", "40 min", "https://example.com/video3", false)
             ),
-            sections = TODO(),
-            rating = TODO(),
-            duration = TODO(),
-            category = TODO()
+            sections = listOf(
+                CourseSection(
+                    id = "1",
+                    title = "Getting Started",
+                    lessons = listOf(
+                        Lesson(
+                            "1",
+                            "Introduction to Kotlin",
+                            "30 min",
+                            "https://example.com/video1",
+                            false
+                        )
+                    )
+                ),
+                CourseSection(
+                    id = "2",
+                    title = "Basic Concepts",
+                    lessons = listOf(
+                        Lesson("2", "Variables and Types", "45 min", "https://example.com/video2", false),
+                        Lesson("3", "Control Flow", "40 min", "https://example.com/video3", false)
+                    )
+                )
+            ),
+            rating = 4.5f,
+            duration = "2 hours",
+            category = "Android Development"
         )
     }
 
@@ -132,7 +154,7 @@ fun CourseDetailScreen(
                     section = section,
                     onLessonClick = { lessonIndex ->
                         navController.navigate(
-                            Screen.Lesson.route + "/${course.id}/${section.id}/$lessonIndex"
+                            Screen.Lesson.createRoute(course.id, section.id, lessonIndex)
                         )
                     }
                 )
@@ -181,9 +203,13 @@ private fun CourseSection(
                 ) {
                     section.lessons.forEachIndexed { index, lesson ->
                         ListItem(
-                            headlineContent = { Text(lesson) },
+                            headlineContent = { Text(text = lesson.title) },
+                            supportingContent = { Text(text = lesson.duration) },
                             leadingContent = {
-                                Icon(Icons.Default.Lock, contentDescription = null)
+                                Icon(
+                                    if (lesson.isCompleted) Icons.Default.Check else Icons.Default.Lock,
+                                    contentDescription = if (lesson.isCompleted) "Completed" else "Locked"
+                                )
                             },
                             modifier = Modifier.clickable { onLessonClick(index) }
                         )
