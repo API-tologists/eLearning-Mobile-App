@@ -63,11 +63,15 @@ fun NavGraph(
         ) { backStackEntry ->
             CourseDetailScreen(
                 courseId = backStackEntry.arguments?.getString("courseId") ?: "",
-                navController = navController
+                navController = navController,
+                authViewModel = authViewModel
             )
         }
         composable(Screen.MyCourses.route) {
-            MyCoursesScreen(navController)
+            MyCoursesScreen(
+                navController = navController,
+                authViewModel = authViewModel
+            )
         }
         composable(Screen.Bookmarks.route) {
             BookmarksScreen(navController)

@@ -17,9 +17,10 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.elearning.data.CourseRepository
 import com.example.elearning.model.AuthState
+import com.example.elearning.model.Course
 import com.example.elearning.navigation.Screen
+import com.example.elearning.repository.CourseRepository
 import com.example.elearning.ui.components.CourseCard
 import com.example.elearning.ui.components.NavigationDrawer
 import com.example.elearning.viewmodel.AuthViewModel
@@ -36,7 +37,7 @@ fun HomeScreen(
     var searchQuery by remember { mutableStateOf("") }
     var showSearchBar by remember { mutableStateOf(false) }
 
-    val allCourses = remember { CourseRepository.courses }
+    val allCourses = remember { CourseRepository.getEnrolledCourses() }
     val filteredCourses = remember(searchQuery) {
         if (searchQuery.isBlank()) {
             allCourses
@@ -136,8 +137,10 @@ fun HomeScreen(
                             )
                         }
                         items(filteredCourses) { course ->
+                            val progress = CourseRepository.getCourseProgress(user.id, course.id)
                             CourseCard(
                                 course = course,
+                                progress = progress,
                                 onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
                             )
                         }
@@ -170,9 +173,11 @@ fun HomeScreen(
                                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 contentPadding = PaddingValues(horizontal = 16.dp)
                             ) {
-                                items(CourseRepository.getFeaturedCourses()) { course ->
+                                items(CourseRepository.getEnrolledCourses().take(3)) { course ->
+                                    val progress = CourseRepository.getCourseProgress(user.id, course.id)
                                     CourseCard(
                                         course = course,
+                                        progress = progress,
                                         onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
                                     )
                                 }
@@ -199,9 +204,14 @@ fun HomeScreen(
                             )
                         }
 
-                        items(CourseRepository.getInProgressCourses()) { course ->
+                        items(allCourses.filter { 
+                            val progress = CourseRepository.getCourseProgress(user.id, it.id)
+                            progress in 1..99 
+                        }) { course ->
+                            val progress = CourseRepository.getCourseProgress(user.id, course.id)
                             CourseProgressCard(
                                 course = course,
+                                progress = progress,
                                 onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) },
                                 modifier = Modifier.padding(horizontal = 16.dp)
                             )
@@ -267,7 +277,8 @@ private fun QuickActionButton(
 
 @Composable
 private fun CourseProgressCard(
-    course: com.example.elearning.model.Course,
+    course: Course,
+    progress: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -292,11 +303,11 @@ private fun CourseProgressCard(
             )
             Spacer(modifier = Modifier.height(8.dp))
             LinearProgressIndicator(
-                progress = course.progress / 100f,
+                progress = { progress / 100f },
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
-                text = "${course.progress}% Complete",
+                text = "$progress% Complete",
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.align(Alignment.End)
             )
