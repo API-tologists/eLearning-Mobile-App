@@ -1,21 +1,22 @@
 package com.example.elearning.ui.screens
 
-import androidx.compose.animation.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
 import com.example.elearning.data.CourseRepository
 import com.example.elearning.model.AuthState
 import com.example.elearning.navigation.Screen
@@ -47,20 +48,51 @@ fun HomeScreen(
             Scaffold(
                 topBar = {
                     TopAppBar(
-                        title = { Text("eLearning") },
+                        title = { 
+                            Text(
+                                "eLearning",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        },
                         navigationIcon = {
-                            IconButton(onClick = { showDrawer = !showDrawer }) {
+                            IconButton(
+                                onClick = { showDrawer = !showDrawer },
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                            ) {
                                 Icon(
                                     if (showDrawer) Icons.Default.Close else Icons.Default.Menu,
-                                    contentDescription = if (showDrawer) "Close" else "Menu"
+                                    contentDescription = if (showDrawer) "Close" else "Menu",
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             }
                         },
                         actions = {
-                            IconButton(onClick = { /* Search */ }) {
-                                Icon(Icons.Default.Search, contentDescription = "Search")
+                            IconButton(
+                                onClick = { /* Search */ },
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                            ) {
+                                Icon(
+                                    Icons.Default.Search,
+                                    contentDescription = "Search",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                             }
-                        }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            titleContentColor = MaterialTheme.colorScheme.onSurface,
+                            navigationIconContentColor = MaterialTheme.colorScheme.primary,
+                            actionIconContentColor = MaterialTheme.colorScheme.primary
+                        ),
+                        modifier = Modifier.shadow(4.dp)
                     )
                 }
             ) { padding ->

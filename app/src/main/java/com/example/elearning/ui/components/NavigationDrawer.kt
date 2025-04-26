@@ -1,7 +1,9 @@
 package com.example.elearning.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -10,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,6 +47,7 @@ fun NavigationDrawer(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(16.dp)
             ) {
                 // User Profile Section
@@ -59,13 +63,15 @@ fun NavigationDrawer(
                         modifier = Modifier
                             .size(64.dp)
                             .clip(CircleShape)
+                            .shadow(4.dp, CircleShape)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text(
                             text = user.name,
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Text(
                             text = user.email,
@@ -75,7 +81,10 @@ fun NavigationDrawer(
                     }
                 }
 
-                Divider(modifier = Modifier.padding(vertical = 8.dp))
+                Divider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                )
 
                 // Navigation Items
                 NavigationDrawerItem(
@@ -85,7 +94,8 @@ fun NavigationDrawer(
                     onClick = {
                         navController.navigate(Screen.Home.route)
                         onDrawerStateChange(false)
-                    }
+                    },
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
 
                 NavigationDrawerItem(
@@ -95,67 +105,74 @@ fun NavigationDrawer(
                     onClick = {
                         navController.navigate(Screen.MyCourses.route)
                         onDrawerStateChange(false)
-                    }
+                    },
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
 
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Outlined.Star, contentDescription = "Bookmarks") },
+                    icon = { Icon(Icons.Outlined.Home, contentDescription = "Bookmarks") },
                     label = { Text("Bookmarks") },
                     selected = false,
                     onClick = {
                         navController.navigate(Screen.Bookmarks.route)
                         onDrawerStateChange(false)
-                    }
+                    },
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
 
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Outlined.Star, contentDescription = "Assignments") },
+                    icon = { Icon(Icons.Outlined.Home, contentDescription = "Assignments") },
                     label = { Text("Assignments") },
                     selected = false,
                     onClick = {
                         navController.navigate(Screen.Assignments.route)
                         onDrawerStateChange(false)
-                    }
+                    },
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
 
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Outlined.Star, contentDescription = "Quizzes") },
+                    icon = { Icon(Icons.Outlined.Home, contentDescription = "Quizzes") },
                     label = { Text("Quizzes") },
                     selected = false,
                     onClick = {
                         navController.navigate(Screen.Quizzes.route)
                         onDrawerStateChange(false)
-                    }
+                    },
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
 
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Outlined.Star, contentDescription = "Schedule") },
+                    icon = { Icon(Icons.Outlined.Home, contentDescription = "Schedule") },
                     label = { Text("Schedule") },
                     selected = false,
                     onClick = {
                         navController.navigate(Screen.Schedule.route)
                         onDrawerStateChange(false)
-                    }
+                    },
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
 
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Outlined.Star, contentDescription = "Discussions") },
+                    icon = { Icon(Icons.Outlined.Home, contentDescription = "Discussions") },
                     label = { Text("Discussions") },
                     selected = false,
                     onClick = {
                         navController.navigate(Screen.Discussions.route)
                         onDrawerStateChange(false)
-                    }
+                    },
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
 
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Outlined.Star, contentDescription = "Progress") },
+                    icon = { Icon(Icons.Outlined.Home, contentDescription = "Progress") },
                     label = { Text("Progress") },
                     selected = false,
                     onClick = {
                         navController.navigate(Screen.Progress.route)
                         onDrawerStateChange(false)
-                    }
+                    },
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
 
                 NavigationDrawerItem(
@@ -165,7 +182,8 @@ fun NavigationDrawer(
                     onClick = {
                         navController.navigate(Screen.Settings.route)
                         onDrawerStateChange(false)
-                    }
+                    },
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
 
                 Spacer(modifier = Modifier.weight(1f))
@@ -180,13 +198,14 @@ fun NavigationDrawer(
                             popUpTo(0) { inclusive = true }
                         }
                         onDrawerStateChange(false)
-                    }
+                    },
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
         },
         modifier = Modifier.fillMaxSize(),
-        gesturesEnabled = true,
-        scrimColor = Color.Black.copy(alpha = 0.3f),
+        gesturesEnabled = false,
+        scrimColor = Color.Black.copy(alpha = 0.5f),
         content = content
     )
 } 
