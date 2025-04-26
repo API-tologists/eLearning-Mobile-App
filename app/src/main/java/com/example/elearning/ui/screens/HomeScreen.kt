@@ -33,9 +33,20 @@ fun HomeScreen(
     val authState by authViewModel.authState.collectAsState()
     val user = (authState as? AuthState.Authenticated)?.user
     var searchQuery by remember { mutableStateOf("") }
+    var showSearchBar by remember { mutableStateOf(false) }
 
-    val featuredCourses = remember { CourseRepository.getFeaturedCourses() }
-    val inProgressCourses = remember { CourseRepository.getInProgressCourses() }
+    val allCourses = remember { CourseRepository.courses }
+    val filteredCourses = remember(searchQuery) {
+        if (searchQuery.isBlank()) {
+            allCourses
+        } else {
+            allCourses.filter { course ->
+                course.title.contains(searchQuery, ignoreCase = true) ||
+                course.instructor.contains(searchQuery, ignoreCase = true) ||
+                course.category.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
 
     if (user != null) {
         NavigationDrawer(
@@ -46,15 +57,34 @@ fun HomeScreen(
             Scaffold(
                 topBar = {
                     TopAppBar(
-                        title = { Text("eLearning") },
+                        title = { 
+                            if (showSearchBar) {
+                                TextField(
+                                    value = searchQuery,
+                                    onValueChange = { searchQuery = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    placeholder = { Text("Search courses...") },
+                                    singleLine = true,
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                                    )
+                                )
+                            } else {
+                                Text("eLearning")
+                            }
+                        },
                         navigationIcon = {
                             IconButton(onClick = { showDrawer = true }) {
                                 Icon(Icons.Default.Menu, contentDescription = "Menu")
                             }
                         },
                         actions = {
-                            IconButton(onClick = { /* Search */ }) {
-                                Icon(Icons.Default.Search, contentDescription = "Search")
+                            IconButton(onClick = { showSearchBar = !showSearchBar }) {
+                                Icon(
+                                    if (showSearchBar) Icons.Default.Close else Icons.Default.Search,
+                                    contentDescription = if (showSearchBar) "Close Search" else "Search"
+                                )
                             }
                         }
                     )
@@ -67,69 +97,85 @@ fun HomeScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    item {
-                        Text(
-                            text = "Welcome, ${user.name}!",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Continue your learning journey",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    if (searchQuery.isNotBlank()) {
+                        item {
+                            Text(
+                                text = "Search Results",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        items(filteredCourses) { course ->
+                            CourseCard(
+                                course = course,
+                                onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
+                            )
+                        }
+                    } else {
+                        item {
+                            Text(
+                                text = "Welcome, ${user.name}!",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Continue your learning journey",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
 
-                    item {
-                        Text(
-                            text = "Featured Courses",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                        item {
+                            Text(
+                                text = "Featured Courses",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
 
-                    item {
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp)
-                        ) {
-                            items(featuredCourses) { course ->
-                                CourseCard(
-                                    course = course,
-                                    onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
-                                )
+                        item {
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                contentPadding = PaddingValues(horizontal = 16.dp)
+                            ) {
+                                items(CourseRepository.getFeaturedCourses()) { course ->
+                                    CourseCard(
+                                        course = course,
+                                        onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
+                                    )
+                                }
                             }
                         }
-                    }
 
-                    item {
-                        Text(
-                            text = "Quick Actions",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                        item {
+                            Text(
+                                text = "Quick Actions",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
 
-                    item {
-                        QuickActionsGrid(navController)
-                    }
+                        item {
+                            QuickActionsGrid(navController)
+                        }
 
-                    item {
-                        Text(
-                            text = "Continue Learning",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                        item {
+                            Text(
+                                text = "Continue Learning",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
 
-                    items(inProgressCourses) { course ->
-                        CourseProgressCard(
-                            course = course,
-                            onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) },
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
+                        items(CourseRepository.getInProgressCourses()) { course ->
+                            CourseProgressCard(
+                                course = course,
+                                onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) },
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                        }
                     }
                 }
             }
