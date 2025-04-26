@@ -102,7 +102,7 @@ fun HomeScreen(
                                     .padding(8.dp)
                                     .clip(CircleShape)
                                     .background(MaterialTheme.colorScheme.primaryContainer)
-                            )) {
+                            ) {
                                 Icon(
                                     if (showSearchBar) Icons.Default.Close else Icons.Default.Search,
                                     contentDescription = if (showSearchBar) "Close Search" else "Search",
