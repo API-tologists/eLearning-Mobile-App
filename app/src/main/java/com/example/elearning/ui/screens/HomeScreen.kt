@@ -98,7 +98,7 @@ fun HomeScreen(
                             items(featuredCourses) { course ->
                                 CourseCard(
                                     course = course,
-                                    onClick = { navController.navigate(Screen.CourseDetail.route + "/${course.id}") }
+                                    onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
                                 )
                             }
                         }
@@ -127,7 +127,7 @@ fun HomeScreen(
                     items(inProgressCourses) { course ->
                         CourseProgressCard(
                             course = course,
-                            onClick = { navController.navigate(Screen.CourseDetail.route + "/${course.id}") },
+                            onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) },
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
                     }
