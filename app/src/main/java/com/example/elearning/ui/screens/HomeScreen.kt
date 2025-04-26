@@ -292,11 +292,11 @@ private fun CourseProgressCard(
             )
             Spacer(modifier = Modifier.height(8.dp))
             LinearProgressIndicator(
-                progress = course.progress,
+                progress = course.progress / 100f,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
-                text = "${(course.progress * 100).toInt()}% Complete",
+                text = "${course.progress}% Complete",
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.align(Alignment.End)
             )

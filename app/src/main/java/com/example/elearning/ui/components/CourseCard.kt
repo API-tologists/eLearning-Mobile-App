@@ -23,7 +23,7 @@ fun CourseCard(
     ) {
         Column {
             AsyncImage(
-                model = course.thumbnail,
+                model = course.imageUrl,
                 contentDescription = course.title,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -47,11 +47,11 @@ fun CourseCard(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 LinearProgressIndicator(
-                    progress = course.progress,
+                    progress = course.progress / 100f,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    text = "${(course.progress * 100).toInt()}% Complete",
+                    text = "${course.progress}% Complete",
                     style = MaterialTheme.typography.bodySmall
                 )
             }

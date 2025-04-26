@@ -1,0 +1,113 @@
+package com.example.elearning.repository
+
+import com.example.elearning.model.Course
+import com.example.elearning.model.CourseSection
+import com.example.elearning.model.Lesson
+
+object CourseRepository {
+    private val enrolledCourses = listOf(
+        Course(
+            id = "1",
+            title = "Android Development Basics",
+            description = "Learn the fundamentals of Android development with Kotlin",
+            imageUrl = "https://example.com/android.jpg",
+            instructor = "John Doe",
+            rating = 4.5f,
+            duration = "8 hours",
+            category = "Mobile Development",
+            progress = 75,
+            sections = listOf(
+                CourseSection(
+                    id = "1",
+                    title = "Introduction to Android",
+                    lessons = listOf(
+                        Lesson(
+                            id = "1",
+                            title = "Android Studio Setup",
+                            duration = "30 min",
+                            videoUrl = "https://example.com/video1",
+                            isCompleted = true
+                        ),
+                        Lesson(
+                            id = "2",
+                            title = "Basic UI Components",
+                            duration = "45 min",
+                            videoUrl = "https://example.com/video2",
+                            isCompleted = true
+                        )
+                    )
+                )
+            )
+        ),
+        Course(
+            id = "2",
+            title = "Kotlin Programming",
+            description = "Master Kotlin programming language",
+            imageUrl = "https://example.com/kotlin.jpg",
+            instructor = "Jane Smith",
+            rating = 4.8f,
+            duration = "10 hours",
+            category = "Programming",
+            progress = 100,
+            sections = listOf(
+                CourseSection(
+                    id = "1",
+                    title = "Kotlin Basics",
+                    lessons = listOf(
+                        Lesson(
+                            id = "1",
+                            title = "Variables and Types",
+                            duration = "40 min",
+                            videoUrl = "https://example.com/video3",
+                            isCompleted = true
+                        ),
+                        Lesson(
+                            id = "2",
+                            title = "Control Flow",
+                            duration = "50 min",
+                            videoUrl = "https://example.com/video4",
+                            isCompleted = true
+                        )
+                    )
+                )
+            )
+        ),
+        Course(
+            id = "3",
+            title = "Jetpack Compose",
+            description = "Modern UI development with Jetpack Compose",
+            imageUrl = "https://example.com/compose.jpg",
+            instructor = "Mike Johnson",
+            rating = 4.7f,
+            duration = "12 hours",
+            category = "UI Development",
+            progress = 0,
+            sections = listOf(
+                CourseSection(
+                    id = "1",
+                    title = "Compose Basics",
+                    lessons = listOf(
+                        Lesson(
+                            id = "1",
+                            title = "Introduction to Compose",
+                            duration = "35 min",
+                            videoUrl = "https://example.com/video5",
+                            isCompleted = false
+                        ),
+                        Lesson(
+                            id = "2",
+                            title = "Layouts and Modifiers",
+                            duration = "45 min",
+                            videoUrl = "https://example.com/video6",
+                            isCompleted = false
+                        )
+                    )
+                )
+            )
+        )
+    )
+
+    fun getEnrolledCourses(): List<Course> = enrolledCourses
+
+    fun getCourseById(id: String): Course? = enrolledCourses.find { it.id == id }
+} 

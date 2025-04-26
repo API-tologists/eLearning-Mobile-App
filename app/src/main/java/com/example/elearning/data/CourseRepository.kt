@@ -9,13 +9,13 @@ object CourseRepository {
         Course(
             id = "1",
             title = "Android Development with Jetpack Compose",
-            instructor = "John Doe",
-            thumbnail = "https://example.com/android.jpg",
-            progress = 0.65f,
             description = "Learn how to build modern Android applications using Jetpack Compose, Android's modern toolkit for building native UI.",
+            imageUrl = "https://example.com/android.jpg",
+            instructor = "John Doe",
             rating = 4.8f,
             duration = "8 hours",
             category = "Mobile Development",
+            progress = 65,
             sections = listOf(
                 CourseSection(
                     id = "1",
@@ -34,33 +34,19 @@ object CourseRepository {
                         Lesson("2-2", "State Management", "50 min", "https://example.com/video5", true),
                         Lesson("2-3", "Layouts and UI Elements", "45 min", "https://example.com/video6", false)
                     )
-                ),
-                CourseSection(
-                    id = "3",
-                    title = "Advanced UI Development",
-                    lessons = listOf(
-                        Lesson("3-1", "Custom Composables", "55 min", "https://example.com/video7", false),
-                        Lesson("3-2", "Animation and Transitions", "50 min", "https://example.com/video8", false),
-                        Lesson("3-3", "Material Design 3", "45 min", "https://example.com/video9", false)
-                    )
                 )
-            ),
-            lessons = listOf(
-                Lesson("1-1", "Introduction to Android Development", "30 min", "https://example.com/video1", false),
-                Lesson("1-2", "Setting Up Your Development Environment", "45 min", "https://example.com/video2", true),
-                Lesson("1-3", "Your First Android App", "60 min", "https://example.com/video3", false)
             )
         ),
         Course(
             id = "2",
             title = "Web Development Fundamentals",
-            instructor = "Jane Smith",
-            thumbnail = "https://example.com/web.jpg",
-            progress = 0.3f,
             description = "Master the fundamentals of web development including HTML, CSS, and JavaScript.",
+            imageUrl = "https://example.com/web.jpg",
+            instructor = "Jane Smith",
             rating = 4.5f,
             duration = "10 hours",
             category = "Web Development",
+            progress = 30,
             sections = listOf(
                 CourseSection(
                     id = "1",
@@ -80,23 +66,18 @@ object CourseRepository {
                         Lesson("2-6", "DOM Manipulation", "55 min", "https://example.com/video9", false)
                     )
                 )
-            ),
-            lessons = listOf(
-                Lesson("2-1", "HTML Structure and Elements", "40 min", "https://example.com/video4", false),
-                Lesson("2-2", "CSS Styling and Layout", "50 min", "https://example.com/video5", true),
-                Lesson("2-3", "Responsive Design", "60 min", "https://example.com/video6", false)
             )
         ),
         Course(
             id = "3",
             title = "Machine Learning with Python",
-            instructor = "Alex Johnson",
-            thumbnail = "https://example.com/ml.jpg",
-            progress = 0.0f,
             description = "Learn the fundamentals of machine learning and implement algorithms using Python.",
+            imageUrl = "https://example.com/ml.jpg",
+            instructor = "Alex Johnson",
             rating = 4.7f,
             duration = "12 hours",
             category = "Data Science",
+            progress = 0,
             sections = listOf(
                 CourseSection(
                     id = "1",
@@ -116,23 +97,18 @@ object CourseRepository {
                         Lesson("3-6", "Neural Networks", "70 min", "https://example.com/video12", false)
                     )
                 )
-            ),
-            lessons = listOf(
-                Lesson("3-1", "NumPy and Pandas", "45 min", "https://example.com/video7", false),
-                Lesson("3-2", "Data Visualization", "55 min", "https://example.com/video8", false),
-                Lesson("3-3", "Data Preprocessing", "50 min", "https://example.com/video9", false)
             )
         ),
         Course(
             id = "4",
             title = "iOS Development with SwiftUI",
-            instructor = "Sarah Wilson",
-            thumbnail = "https://example.com/ios.jpg",
-            progress = 0.8f,
             description = "Build beautiful iOS applications using SwiftUI and modern Apple frameworks.",
+            imageUrl = "https://example.com/ios.jpg",
+            instructor = "Sarah Wilson",
             rating = 4.9f,
             duration = "9 hours",
             category = "Mobile Development",
+            progress = 80,
             sections = listOf(
                 CourseSection(
                     id = "1",
@@ -152,23 +128,18 @@ object CourseRepository {
                         Lesson("4-6", "App Architecture", "60 min", "https://example.com/video15", false)
                     )
                 )
-            ),
-            lessons = listOf(
-                Lesson("4-1", "Views and Modifiers", "40 min", "https://example.com/video10", true),
-                Lesson("4-2", "State Management", "50 min", "https://example.com/video11", true),
-                Lesson("4-3", "Navigation", "45 min", "https://example.com/video12", false)
             )
         ),
         Course(
             id = "5",
             title = "Cloud Computing with AWS",
-            instructor = "Michael Brown",
-            thumbnail = "https://example.com/aws.jpg",
-            progress = 0.45f,
             description = "Learn how to build and deploy applications on Amazon Web Services.",
+            imageUrl = "https://example.com/aws.jpg",
+            instructor = "Michael Brown",
             rating = 4.6f,
             duration = "15 hours",
             category = "Cloud Computing",
+            progress = 45,
             sections = listOf(
                 CourseSection(
                     id = "1",
@@ -188,11 +159,6 @@ object CourseRepository {
                         Lesson("5-6", "Serverless with Lambda", "60 min", "https://example.com/video18", false)
                     )
                 )
-            ),
-            lessons = listOf(
-                Lesson("5-1", "Cloud Computing Basics", "50 min", "https://example.com/video13", true),
-                Lesson("5-2", "AWS Core Services", "60 min", "https://example.com/video14", false),
-                Lesson("5-3", "Security and Compliance", "55 min", "https://example.com/video15", false)
             )
         )
     )
@@ -201,9 +167,9 @@ object CourseRepository {
     
     fun getFeaturedCourses(): List<Course> = courses.take(3)
     
-    fun getInProgressCourses(): List<Course> = courses.filter { it.progress > 0f && it.progress < 1f }
+    fun getInProgressCourses(): List<Course> = courses.filter { it.progress > 0 && it.progress < 100 }
     
-    fun getCompletedCourses(): List<Course> = courses.filter { it.progress >= 1f }
+    fun getCompletedCourses(): List<Course> = courses.filter { it.progress == 100 }
     
     fun getCoursesByCategory(category: String): List<Course> = 
         courses.filter { it.category.equals(category, ignoreCase = true) }

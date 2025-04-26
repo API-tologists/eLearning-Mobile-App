@@ -34,20 +34,9 @@ fun CourseDetailScreen(
             id = courseId,
             title = "Android Development with Jetpack Compose",
             instructor = "John Doe",
-            thumbnail = "https://example.com/android.jpg",
-            progress = 0.65f,
+            imageUrl = "https://example.com/android.jpg",
+            progress = 65,
             description = "Learn how to build modern Android applications using Jetpack Compose, Android's modern toolkit for building native UI.",
-            lessons = listOf(
-                Lesson(
-                    "1",
-                    "Introduction to Kotlin",
-                    "30 min",
-                    "https://example.com/video1",
-                    false
-                ),
-                Lesson("2", "Variables and Types", "45 min", "https://example.com/video2", false),
-                Lesson("3", "Control Flow", "40 min", "https://example.com/video3", false)
-            ),
             sections = listOf(
                 CourseSection(
                     id = "1",
@@ -106,7 +95,7 @@ fun CourseDetailScreen(
         ) {
             item {
                 AsyncImage(
-                    model = course.thumbnail,
+                    model = course.imageUrl,
                     contentDescription = "Course Thumbnail",
                     modifier = Modifier
                         .fillMaxWidth()
@@ -133,11 +122,11 @@ fun CourseDetailScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     LinearProgressIndicator(
-                        progress = course.progress,
+                        progress = course.progress / 100f,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Text(
-                        text = "${(course.progress * 100).toInt()}% Complete",
+                        text = "${course.progress}% Complete",
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.align(Alignment.End)
                     )

@@ -63,10 +63,13 @@ object UserRepository {
         val course = CourseRepository.courses.find { it.id == courseId }
         
         return if (user != null && course != null) {
+            val totalLessons = course.sections.sumOf { it.lessons.size }
             val completedLessons = user.completedLessons.count { lessonId ->
-                course.lessons.any { it.id == lessonId }
+                course.sections.any { section ->
+                    section.lessons.any { it.id == lessonId }
+                }
             }
-            completedLessons.toFloat() / course.lessons.size
+            if (totalLessons > 0) completedLessons.toFloat() / totalLessons else 0f
         } else {
             0f
         }
