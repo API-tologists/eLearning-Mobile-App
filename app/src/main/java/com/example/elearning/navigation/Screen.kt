@@ -1,0 +1,21 @@
+package com.example.elearning.navigation
+
+sealed class Screen(val route: String) {
+    object Login : Screen("login")
+    object Home : Screen("home")
+    object MyCourses : Screen("my_courses")
+    object Bookmarks : Screen("bookmarks")
+    object Assignments : Screen("assignments")
+    object Quizzes : Screen("quizzes")
+    object Schedule : Screen("schedule")
+    object Discussions : Screen("discussions")
+    object Progress : Screen("progress")
+    object Settings : Screen("settings")
+    object CourseDetail : Screen("course/{courseId}") {
+        fun createRoute(courseId: String) = "course/$courseId"
+    }
+    object Lesson : Screen("lesson/{courseId}/{sectionId}/{lessonIndex}") {
+        fun createRoute(courseId: String, sectionId: String, lessonIndex: Int) =
+            "lesson/$courseId/$sectionId/$lessonIndex"
+    }
+} 
