@@ -2,6 +2,7 @@ package com.example.elearning.navigation
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
+    object SignUp : Screen("signup")
     object Home : Screen("home")
     object MyCourses : Screen("my_courses")
     object Bookmarks : Screen("bookmarks")
