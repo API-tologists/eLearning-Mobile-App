@@ -38,6 +38,17 @@ fun NavGraph(
                 }
             )
         }
+        composable(Screen.SignUp.route) {
+            SignUpScreen(
+                navController = navController,
+                onSignUp = { name, email, password, confirmPassword ->
+                    // TODO: Implement sign up logic
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.SignUp.route) { inclusive = true }
+                    }
+                }
+            )
+        }
         composable(Screen.Home.route) {
             HomeScreen(
                 navController = navController,
