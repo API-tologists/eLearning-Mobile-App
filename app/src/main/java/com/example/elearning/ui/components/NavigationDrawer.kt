@@ -6,7 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,11 +23,23 @@ import com.example.elearning.navigation.Screen
 fun NavigationDrawer(
     user: User,
     navController: NavController,
-    onCloseDrawer: () -> Unit,
+    isDrawerOpen: Boolean,
+    onDrawerStateChange: (Boolean) -> Unit,
     content: @Composable () -> Unit
 ) {
+    val drawerState = rememberDrawerState(if (isDrawerOpen) DrawerValue.Open else DrawerValue.Closed)
+    
+    // Update drawer state when isDrawerOpen changes
+    LaunchedEffect(isDrawerOpen) {
+        if (isDrawerOpen) {
+            drawerState.open()
+        } else {
+            drawerState.close()
+        }
+    }
+
     ModalNavigationDrawer(
-        drawerState = rememberDrawerState(initialValue = DrawerValue.Closed),
+        drawerState = drawerState,
         drawerContent = {
             Column(
                 modifier = Modifier
@@ -72,7 +84,7 @@ fun NavigationDrawer(
                     selected = false,
                     onClick = {
                         navController.navigate(Screen.Home.route)
-                        onCloseDrawer()
+                        onDrawerStateChange(false)
                     }
                 )
 
@@ -82,7 +94,7 @@ fun NavigationDrawer(
                     selected = false,
                     onClick = {
                         navController.navigate(Screen.MyCourses.route)
-                        onCloseDrawer()
+                        onDrawerStateChange(false)
                     }
                 )
 
@@ -92,7 +104,7 @@ fun NavigationDrawer(
                     selected = false,
                     onClick = {
                         navController.navigate(Screen.Bookmarks.route)
-                        onCloseDrawer()
+                        onDrawerStateChange(false)
                     }
                 )
 
@@ -102,7 +114,7 @@ fun NavigationDrawer(
                     selected = false,
                     onClick = {
                         navController.navigate(Screen.Assignments.route)
-                        onCloseDrawer()
+                        onDrawerStateChange(false)
                     }
                 )
 
@@ -112,7 +124,7 @@ fun NavigationDrawer(
                     selected = false,
                     onClick = {
                         navController.navigate(Screen.Quizzes.route)
-                        onCloseDrawer()
+                        onDrawerStateChange(false)
                     }
                 )
 
@@ -122,7 +134,7 @@ fun NavigationDrawer(
                     selected = false,
                     onClick = {
                         navController.navigate(Screen.Schedule.route)
-                        onCloseDrawer()
+                        onDrawerStateChange(false)
                     }
                 )
 
@@ -132,7 +144,7 @@ fun NavigationDrawer(
                     selected = false,
                     onClick = {
                         navController.navigate(Screen.Discussions.route)
-                        onCloseDrawer()
+                        onDrawerStateChange(false)
                     }
                 )
 
@@ -142,7 +154,7 @@ fun NavigationDrawer(
                     selected = false,
                     onClick = {
                         navController.navigate(Screen.Progress.route)
-                        onCloseDrawer()
+                        onDrawerStateChange(false)
                     }
                 )
 
@@ -152,7 +164,7 @@ fun NavigationDrawer(
                     selected = false,
                     onClick = {
                         navController.navigate(Screen.Settings.route)
-                        onCloseDrawer()
+                        onDrawerStateChange(false)
                     }
                 )
 
@@ -167,7 +179,7 @@ fun NavigationDrawer(
                         navController.navigate(Screen.Login.route) {
                             popUpTo(0) { inclusive = true }
                         }
-                        onCloseDrawer()
+                        onDrawerStateChange(false)
                     }
                 )
             }

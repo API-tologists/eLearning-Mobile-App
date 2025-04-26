@@ -41,15 +41,19 @@ fun HomeScreen(
         NavigationDrawer(
             user = user,
             navController = navController,
-            onCloseDrawer = { showDrawer = false }
+            isDrawerOpen = showDrawer,
+            onDrawerStateChange = { showDrawer = it }
         ) {
             Scaffold(
                 topBar = {
                     TopAppBar(
                         title = { Text("eLearning") },
                         navigationIcon = {
-                            IconButton(onClick = { showDrawer = true }) {
-                                Icon(Icons.Default.Menu, contentDescription = "Menu")
+                            IconButton(onClick = { showDrawer = !showDrawer }) {
+                                Icon(
+                                    if (showDrawer) Icons.Default.Close else Icons.Default.Menu,
+                                    contentDescription = if (showDrawer) "Close" else "Menu"
+                                )
                             }
                         },
                         actions = {
