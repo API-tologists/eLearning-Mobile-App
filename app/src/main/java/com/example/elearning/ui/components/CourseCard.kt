@@ -14,6 +14,7 @@ import com.example.elearning.model.Course
 @Composable
 fun CourseCard(
     course: Course,
+    progress: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -47,11 +48,11 @@ fun CourseCard(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 LinearProgressIndicator(
-                    progress = course.progress / 100f,
+                    progress = { progress / 100f },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    text = "${course.progress}% Complete",
+                    text = "$progress% Complete",
                     style = MaterialTheme.typography.bodySmall
                 )
             }

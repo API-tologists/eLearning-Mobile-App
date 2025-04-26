@@ -3,6 +3,7 @@ package com.example.elearning.repository
 import com.example.elearning.model.Course
 import com.example.elearning.model.CourseSection
 import com.example.elearning.model.Lesson
+import com.example.elearning.model.CourseEnrollment
 
 object CourseRepository {
     private val enrolledCourses = listOf(
@@ -15,7 +16,6 @@ object CourseRepository {
             rating = 4.5f,
             duration = "8 hours",
             category = "Mobile Development",
-            progress = 75,
             sections = listOf(
                 CourseSection(
                     id = "1",
@@ -48,7 +48,6 @@ object CourseRepository {
             rating = 4.8f,
             duration = "10 hours",
             category = "Programming",
-            progress = 100,
             sections = listOf(
                 CourseSection(
                     id = "1",
@@ -81,7 +80,6 @@ object CourseRepository {
             rating = 4.7f,
             duration = "12 hours",
             category = "UI Development",
-            progress = 0,
             sections = listOf(
                 CourseSection(
                     id = "1",
@@ -107,7 +105,32 @@ object CourseRepository {
         )
     )
 
+    private val courseEnrollments = mutableListOf(
+        CourseEnrollment(
+            courseId = "1",
+            studentId = "1", // John Doe's ID
+            progress = 30
+        )
+    )
+
     fun getEnrolledCourses(): List<Course> = enrolledCourses
 
     fun getCourseById(id: String): Course? = enrolledCourses.find { it.id == id }
+
+    fun getCourseProgress(studentId: String, courseId: String): Int {
+        return courseEnrollments.find { it.studentId == studentId && it.courseId == courseId }?.progress ?: 0
+    }
+
+    fun enrollStudentInCourse(studentId: String, courseId: String) {
+        if (courseEnrollments.none { it.studentId == studentId && it.courseId == courseId }) {
+            courseEnrollments.add(CourseEnrollment(courseId, studentId, 0))
+        }
+    }
+
+    fun updateCourseProgress(studentId: String, courseId: String, progress: Int) {
+        val enrollment = courseEnrollments.find { it.studentId == studentId && it.courseId == courseId }
+        enrollment?.let {
+            courseEnrollments[courseEnrollments.indexOf(it)] = it.copy(progress = progress)
+        }
+    }
 } 

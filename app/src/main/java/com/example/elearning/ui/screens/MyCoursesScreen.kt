@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,24 +22,32 @@ import com.example.elearning.R
 import com.example.elearning.model.Course
 import com.example.elearning.navigation.Screen
 import com.example.elearning.repository.CourseRepository
+import com.example.elearning.viewmodel.AuthViewModel
+import com.example.elearning.model.AuthState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyCoursesScreen(navController: NavController) {
+fun MyCoursesScreen(
+    navController: NavController,
+    authViewModel: AuthViewModel
+) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") }
     val filters = listOf("All", "In Progress", "Completed", "New")
     
+    val authState by authViewModel.authState.collectAsState()
+    val user = (authState as? AuthState.Authenticated)?.user
     val enrolledCourses = remember { CourseRepository.getEnrolledCourses() }
     val filteredCourses = remember(enrolledCourses, searchQuery, selectedFilter) {
         enrolledCourses.filter { course ->
+            val progress = CourseRepository.getCourseProgress(user?.id ?: "", course.id)
             val matchesSearch = course.title.contains(searchQuery, ignoreCase = true) ||
                                course.description.contains(searchQuery, ignoreCase = true)
             val matchesFilter = when (selectedFilter) {
                 "All" -> true
-                "In Progress" -> course.progress in 1..99
-                "Completed" -> course.progress == 100
-                "New" -> course.progress == 0
+                "In Progress" -> progress in 1..99
+                "Completed" -> progress == 100
+                "New" -> progress == 0
                 else -> true
             }
             matchesSearch && matchesFilter
@@ -51,7 +60,7 @@ fun MyCoursesScreen(navController: NavController) {
                 title = { Text("My Courses") },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -104,8 +113,10 @@ fun MyCoursesScreen(navController: NavController) {
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(filteredCourses) { course ->
+                    val progress = CourseRepository.getCourseProgress(user?.id ?: "", course.id)
                     CourseCard(
                         course = course,
+                        progress = progress,
                         onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
                     )
                 }
@@ -117,6 +128,7 @@ fun MyCoursesScreen(navController: NavController) {
 @Composable
 fun CourseCard(
     course: Course,
+    progress: Int,
     onClick: () -> Unit
 ) {
     Card(
@@ -152,9 +164,9 @@ fun CourseCard(
                     )
                 }
                 Icon(
-                    imageVector = if (course.progress == 100) Icons.Default.CheckCircle else Icons.Default.PlayArrow,
-                    contentDescription = if (course.progress == 100) "Completed" else "In Progress",
-                    tint = if (course.progress == 100) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    imageVector = if (progress == 100) Icons.Default.CheckCircle else Icons.Default.PlayArrow,
+                    contentDescription = if (progress == 100) "Completed" else "In Progress",
+                    tint = if (progress == 100) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
             }
             
@@ -162,21 +174,13 @@ fun CourseCard(
             
             // Progress Bar
             LinearProgressIndicator(
-                progress = course.progress / 100f,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                progress = { progress / 100f },
+                modifier = Modifier.fillMaxWidth()
             )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
             Text(
-                text = "${course.progress}% Complete",
+                text = "$progress% Complete",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                modifier = Modifier.align(Alignment.End)
             )
         }
     }
