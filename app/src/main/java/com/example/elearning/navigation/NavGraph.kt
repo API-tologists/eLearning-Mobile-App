@@ -4,21 +4,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.example.elearning.model.AuthState
+import com.example.elearning.model.UserRole
 import com.example.elearning.ui.screens.*
 import com.example.elearning.viewmodel.AuthViewModel
+import com.example.elearning.viewmodel.CourseViewModel
 
 @Composable
 fun NavGraph(
-    navController: NavHostController = rememberNavController(),
-    authViewModel: AuthViewModel
+    navController: NavHostController,
+    authViewModel: AuthViewModel,
+    courseViewModel: CourseViewModel
 ) {
     val authState by authViewModel.authState.collectAsState()
+    val user = (authState as? AuthState.Authenticated)?.user
 
     NavHost(
         navController = navController,
@@ -40,63 +41,73 @@ fun NavGraph(
             )
         }
         composable(Screen.Home.route) {
-            HomeScreen(
-                navController = navController,
-                authViewModel = authViewModel
-            )
-        }
-        composable(
-            route = Screen.CourseDetail.route,
-            arguments = listOf(
-                navArgument("courseId") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            CourseDetailScreen(
-                courseId = backStackEntry.arguments?.getString("courseId") ?: "",
-                navController = navController,
-                authViewModel = authViewModel
-            )
+            if (user != null) {
+                if (user.role == UserRole.INSTRUCTOR) {
+                    InstructorDashboardScreen(
+                        navController = navController,
+                        user = user,
+                        courseViewModel = courseViewModel
+                    )
+                } else {
+                    HomeScreen(
+                        navController = navController,
+                        authViewModel = authViewModel,
+                        courseViewModel = courseViewModel
+                    )
+                }
+            }
         }
         composable(Screen.MyCourses.route) {
             MyCoursesScreen(
                 navController = navController,
-                authViewModel = authViewModel
+                authViewModel = authViewModel,
+                courseViewModel = courseViewModel
             )
         }
         composable(Screen.Bookmarks.route) {
-            BookmarksScreen(navController)
+            BookmarksScreen(navController = navController)
         }
         composable(Screen.Assignments.route) {
-            AssignmentsScreen(navController)
+            AssignmentsScreen(navController = navController)
         }
         composable(Screen.Quizzes.route) {
-            QuizzesScreen(navController)
+            QuizzesScreen(navController = navController)
         }
         composable(Screen.Schedule.route) {
-            ScheduleScreen(navController)
+            ScheduleScreen(navController = navController)
         }
         composable(Screen.Discussions.route) {
-            DiscussionsScreen(navController)
+            DiscussionsScreen(navController = navController)
         }
         composable(Screen.Progress.route) {
-            ProgressScreen(navController)
+            ProgressScreen(navController = navController)
         }
         composable(Screen.Settings.route) {
-            SettingsScreen(navController)
+            SettingsScreen(navController = navController)
         }
         composable(
-            route = Screen.Lesson.route,
-            arguments = listOf(
-                navArgument("courseId") { type = NavType.StringType },
-                navArgument("sectionId") { type = NavType.StringType },
-                navArgument("lessonIndex") { type = NavType.IntType }
-            )
+            route = Screen.CourseDetail.route,
+            arguments = Screen.CourseDetail.arguments
         ) { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: return@composable
+            CourseDetailScreen(
+                navController = navController,
+                authViewModel = authViewModel,
+                courseViewModel = courseViewModel,
+                courseId = courseId
+            )
+        }
+        composable(
+            route = Screen.Lesson.route
+        ) { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: return@composable
+            val sectionId = backStackEntry.arguments?.getString("sectionId") ?: return@composable
+            val lessonIndex = backStackEntry.arguments?.getInt("lessonIndex") ?: return@composable
             LessonScreen(
-                courseId = backStackEntry.arguments?.getString("courseId") ?: "",
-                sectionId = backStackEntry.arguments?.getString("sectionId") ?: "",
-                lessonIndex = backStackEntry.arguments?.getInt("lessonIndex") ?: 0,
-                navController = navController
+                navController = navController,
+                courseId = courseId,
+                sectionId = sectionId,
+                lessonIndex = lessonIndex
             )
         }
     }

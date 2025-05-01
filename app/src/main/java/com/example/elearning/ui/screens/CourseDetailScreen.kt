@@ -4,6 +4,7 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -17,111 +18,196 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.elearning.model.AuthState
 import com.example.elearning.model.Course
 import com.example.elearning.model.CourseSection
 import com.example.elearning.model.Lesson
 import com.example.elearning.navigation.Screen
-import com.example.elearning.repository.CourseRepository
 import com.example.elearning.viewmodel.AuthViewModel
-import com.example.elearning.model.AuthState
+import com.example.elearning.viewmodel.CourseViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CourseDetailScreen(
-    courseId: String,
     navController: NavController,
     authViewModel: AuthViewModel,
-    modifier: Modifier = Modifier
+    courseViewModel: CourseViewModel,
+    courseId: String
 ) {
-    // In a real app, this would come from a ViewModel
-    val course = remember { CourseRepository.getCourseById(courseId) }
     val authState by authViewModel.authState.collectAsState()
     val user = (authState as? AuthState.Authenticated)?.user
-    val progress = remember { CourseRepository.getCourseProgress(user?.id ?: "", courseId) }
-    var isBookmarked by remember { mutableStateOf(false) }
+    val course by courseViewModel.selectedCourse.collectAsState()
+    val courseProgress by courseViewModel.courseProgress.collectAsState()
+    
+    var isEnrolled by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(courseId) {
+        courseViewModel.loadCourseById(courseId)
+        user?.id?.let { userId ->
+            courseViewModel.loadCourseProgress(userId, courseId)
+        }
+    }
+    
+    LaunchedEffect(course, user) {
+        if (course != null && user != null) {
+            courseViewModel.loadEnrolledCourses(user.id)
+            isEnrolled = courseViewModel.enrolledCourses.value.any { it.id == courseId }
+        }
+    }
 
-    course?.let {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text(it.title) },
-                    navigationIcon = {
-                        IconButton(onClick = { navController.navigateUp() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { isBookmarked = !isBookmarked }) {
-                            Icon(
-                                if (isBookmarked) Icons.Filled.Phone else Icons.Filled.ThumbUp,
-                                contentDescription = if (isBookmarked) "Remove Bookmark" else "Add Bookmark"
-                            )
-                        }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Course Details") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.navigateUp() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
-                )
-            }
-        ) { paddingValues ->
+                }
+            )
+        }
+    ) { padding ->
+        course?.let { currentCourse ->
             LazyColumn(
-                modifier = modifier
+                modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    .padding(padding)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 item {
                     AsyncImage(
-                        model = it.imageUrl,
-                        contentDescription = "Course Thumbnail",
+                        model = currentCourse.imageUrl,
+                        contentDescription = "Course Image",
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(200.dp),
-                        contentScale = ContentScale.Crop
+                            .height(200.dp)
                     )
-                }
-
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text(
+                        text = currentCourse.title,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "Instructor: ${currentCourse.instructor}",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = it.title,
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Instructor: ${it.instructor}",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        LinearProgressIndicator(
-                            progress = { progress / 100f },
-                            modifier = Modifier.fillMaxWidth()
+                            text = "Rating: ${currentCourse.rating}",
+                            style = MaterialTheme.typography.bodyLarge
                         )
                         Text(
-                            text = "$progress% Complete",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.align(Alignment.End)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = it.description,
+                            text = "Duration: ${currentCourse.duration}",
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
-                }
-
-                items(it.sections) { section ->
-                    CourseSection(
-                        section = section,
-                        onLessonClick = { lessonIndex ->
-                            navController.navigate(
-                                Screen.Lesson.createRoute(it.id, section.id, lessonIndex)
-                            )
-                        }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text(
+                        text = currentCourse.description,
+                        style = MaterialTheme.typography.bodyLarge
                     )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    if (user != null) {
+                        if (isEnrolled) {
+                            Text(
+                                text = "Progress: $courseProgress%",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            LinearProgressIndicator(
+                                progress = { courseProgress / 100f },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        } else {
+                            Button(
+                                onClick = {
+                                    user.id?.let { userId ->
+                                        courseViewModel.enrollInCourse(userId, currentCourse.id)
+                                        isEnrolled = true
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Enroll Now")
+                            }
+                        }
+                    }
+                }
+                
+                items(currentCourse.sections) { section ->
+                    CourseSectionItem(section = section)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CourseSectionItem(section: CourseSection) {
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = section.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            section.lessons.forEach { lesson ->
+                LessonItem(lesson = lesson)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LessonItem(lesson: Lesson) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = if (lesson.isCompleted) Icons.Default.CheckCircle else Icons.Default.PlayArrow,
+            contentDescription = if (lesson.isCompleted) "Completed" else "Not Completed",
+            tint = if (lesson.isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+        )
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Column {
+            Text(
+                text = lesson.title,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = lesson.duration,
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }

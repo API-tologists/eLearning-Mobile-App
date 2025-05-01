@@ -1,5 +1,8 @@
 package com.example.elearning.navigation
 
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object SignUp : Screen("signup")
@@ -12,11 +15,15 @@ sealed class Screen(val route: String) {
     object Discussions : Screen("discussions")
     object Progress : Screen("progress")
     object Settings : Screen("settings")
-    object CourseDetail : Screen("course/{courseId}") {
-        fun createRoute(courseId: String) = "course/$courseId"
+    object CourseDetail : Screen("course_detail/{courseId}") {
+        val arguments = listOf(
+            navArgument("courseId") { type = NavType.StringType }
+        )
+        fun createRoute(courseId: String) = "course_detail/$courseId"
     }
     object Lesson : Screen("lesson/{courseId}/{sectionId}/{lessonIndex}") {
         fun createRoute(courseId: String, sectionId: String, lessonIndex: Int) =
             "lesson/$courseId/$sectionId/$lessonIndex"
     }
+    object InstructorDashboard : Screen("instructor_dashboard")
 } 

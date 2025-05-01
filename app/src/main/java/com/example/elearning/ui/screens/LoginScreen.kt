@@ -7,9 +7,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Lock
-
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -87,26 +84,23 @@ fun LoginScreen(
                     .padding(bottom = 32.dp),
                 contentScale = ContentScale.Fit
             )
-
+            
             Text(
                 text = "Welcome Back",
-                style = MaterialTheme.typography.headlineLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
             )
             
             Spacer(modifier = Modifier.height(8.dp))
             
             Text(
                 text = "Sign in to continue learning",
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                )
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
             Spacer(modifier = Modifier.height(32.dp))
-
+            
             // Error message
             errorMessage?.let {
                 Text(
@@ -119,10 +113,7 @@ fun LoginScreen(
             
             OutlinedTextField(
                 value = email,
-                onValueChange = { 
-                    email = it
-                    errorMessage = null
-                },
+                onValueChange = { email = it },
                 label = { Text("Email") },
                 leadingIcon = {
                     Icon(Icons.Default.Email, contentDescription = "Email")
@@ -138,17 +129,15 @@ fun LoginScreen(
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline,
                     focusedLabelColor = MaterialTheme.colorScheme.primary
-                )
+                ),
+                enabled = !isLoading
             )
             
             Spacer(modifier = Modifier.height(16.dp))
             
             OutlinedTextField(
                 value = password,
-                onValueChange = { 
-                    password = it
-                    errorMessage = null
-                },
+                onValueChange = { password = it },
                 label = { Text("Password") },
                 leadingIcon = {
                     Icon(Icons.Default.Lock, contentDescription = "Password")
@@ -156,7 +145,7 @@ fun LoginScreen(
                 trailingIcon = {
                     IconButton(onClick = { showPassword = !showPassword }) {
                         Icon(
-                            imageVector = if (showPassword) Icons.Outlined.Home else Icons.Outlined.Lock,
+                            imageVector = if (showPassword) Icons.Default.Home else Icons.Default.Lock,
                             contentDescription = if (showPassword) "Hide password" else "Show password"
                         )
                     }
@@ -173,7 +162,8 @@ fun LoginScreen(
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline,
                     focusedLabelColor = MaterialTheme.colorScheme.primary
-                )
+                ),
+                enabled = !isLoading
             )
             
             Spacer(modifier = Modifier.height(24.dp))
@@ -235,18 +225,11 @@ fun LoginScreen(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    "Don't have an account?",
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                )
+                Text("Don't have an account?")
                 TextButton(
                     onClick = { navController.navigate(Screen.SignUp.route) }
                 ) {
-                    Text(
-                        "Create Account",
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Sign Up")
                 }
             }
         }

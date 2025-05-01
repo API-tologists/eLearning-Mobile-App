@@ -17,36 +17,47 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.elearning.model.AuthState
 import com.example.elearning.model.Course
 import com.example.elearning.navigation.Screen
-import com.example.elearning.repository.CourseRepository
 import com.example.elearning.ui.components.CourseCard
 import com.example.elearning.ui.components.NavigationDrawer
 import com.example.elearning.viewmodel.AuthViewModel
+import com.example.elearning.viewmodel.CourseViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
-    authViewModel: AuthViewModel
+    authViewModel: AuthViewModel,
+    courseViewModel: CourseViewModel = viewModel()
 ) {
     var showDrawer by remember { mutableStateOf(false) }
     val authState by authViewModel.authState.collectAsState()
     val user = (authState as? AuthState.Authenticated)?.user
     var searchQuery by remember { mutableStateOf("") }
     var showSearchBar by remember { mutableStateOf(false) }
-
-    val allCourses = remember { CourseRepository.getEnrolledCourses() }
+    
+    val courses by courseViewModel.allCourses.collectAsState(emptyList())
+    val enrolledCourses by courseViewModel.enrolledCourses.collectAsState(emptyList())
+    
     val filteredCourses = remember(searchQuery) {
         if (searchQuery.isBlank()) {
-            allCourses
+            courses
         } else {
-            allCourses.filter { course ->
+            courses.filter { course ->
                 course.title.contains(searchQuery, ignoreCase = true) ||
                 course.instructor.contains(searchQuery, ignoreCase = true) ||
                 course.category.contains(searchQuery, ignoreCase = true)
             }
+        }
+    }
+
+    // Load enrolled courses when user is authenticated
+    LaunchedEffect(user?.id) {
+        user?.id?.let { userId ->
+            courseViewModel.loadEnrolledCourses(userId)
         }
     }
 
@@ -76,11 +87,11 @@ fun HomeScreen(
                                 )
                             } else {
                                 Text(
-                                "eLearning",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                              )
+                                    "eLearning",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         },
                         navigationIcon = {
@@ -92,21 +103,22 @@ fun HomeScreen(
                                     .background(MaterialTheme.colorScheme.primaryContainer)
                             ) {
                                 Icon(
-                                    if (showDrawer) Icons.Default.Close else Icons.Default.Menu,
+                                    imageVector = if (showDrawer) Icons.Default.Close else Icons.Default.Menu,
                                     contentDescription = if (showDrawer) "Close" else "Menu",
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
                         },
                         actions = {
-                            IconButton(onClick = { showSearchBar = !showSearchBar },
-                                      modifier = Modifier
+                            IconButton(
+                                onClick = { showSearchBar = !showSearchBar },
+                                modifier = Modifier
                                     .padding(8.dp)
                                     .clip(CircleShape)
                                     .background(MaterialTheme.colorScheme.primaryContainer)
                             ) {
                                 Icon(
-                                    if (showSearchBar) Icons.Default.Close else Icons.Default.Search,
+                                    imageVector = if (showSearchBar) Icons.Default.Close else Icons.Default.Search,
                                     contentDescription = if (showSearchBar) "Close Search" else "Search",
                                     tint = MaterialTheme.colorScheme.primary
                                 )
@@ -138,10 +150,8 @@ fun HomeScreen(
                             )
                         }
                         items(filteredCourses) { course ->
-                            val progress = CourseRepository.getCourseProgress(user.id, course.id)
                             CourseCard(
                                 course = course,
-                                progress = progress,
                                 onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
                             )
                         }
@@ -163,26 +173,17 @@ fun HomeScreen(
 
                         item {
                             Text(
-                                text = "Featured Courses",
+                                text = "Available Courses",
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold
                             )
                         }
 
-                        item {
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                contentPadding = PaddingValues(horizontal = 16.dp)
-                            ) {
-                                items(CourseRepository.getEnrolledCourses().take(3)) { course ->
-                                    val progress = CourseRepository.getCourseProgress(user.id, course.id)
-                                    CourseCard(
-                                        course = course,
-                                        progress = progress,
-                                        onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
-                                    )
-                                }
-                            }
+                        items(courses) { course ->
+                            CourseCard(
+                                course = course,
+                                onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
+                            )
                         }
 
                         item {
@@ -197,25 +198,21 @@ fun HomeScreen(
                             QuickActionsGrid(navController)
                         }
 
-                        item {
-                            Text(
-                                text = "Continue Learning",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        if (enrolledCourses.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = "Continue Learning",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
 
-                        items(allCourses.filter { 
-                            val progress = CourseRepository.getCourseProgress(user.id, it.id)
-                            progress in 1..99 
-                        }) { course ->
-                            val progress = CourseRepository.getCourseProgress(user.id, course.id)
-                            CourseProgressCard(
-                                course = course,
-                                progress = progress,
-                                onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) },
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
+                            items(enrolledCourses) { course ->
+                                CourseCard(
+                                    course = course,
+                                    onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
+                                )
+                            }
                         }
                     }
                 }
@@ -273,45 +270,5 @@ private fun QuickActionButton(
             .height(80.dp)
     ) {
         Text(text)
-    }
-}
-
-@Composable
-private fun CourseProgressCard(
-    course: Course,
-    progress: Int,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Text(
-                text = course.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Instructor: ${course.instructor}",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            LinearProgressIndicator(
-                progress = { progress / 100f },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Text(
-                text = "$progress% Complete",
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.align(Alignment.End)
-            )
-        }
     }
 } 

@@ -17,6 +17,7 @@ import androidx.navigation.NavController
 import com.example.elearning.navigation.Screen
 import com.example.elearning.viewmodel.AuthViewModel
 import com.example.elearning.model.AuthState
+import com.example.elearning.model.UserRole
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
@@ -35,6 +36,7 @@ fun SignUpScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showPassword by remember { mutableStateOf(false) }
     var showConfirmPassword by remember { mutableStateOf(false) }
+    var selectedRole by remember { mutableStateOf(UserRole.STUDENT) }
     
     val scope = rememberCoroutineScope()
     
@@ -81,126 +83,121 @@ fun SignUpScreen(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
         }
-
-        // Name field
+        
         OutlinedTextField(
             value = name,
-            onValueChange = { 
-                name = it
-                errorMessage = null
-            },
+            onValueChange = { name = it },
             label = { Text("Full Name") },
-            leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Name") },
+            leadingIcon = {
+                Icon(Icons.Default.Person, contentDescription = "Name")
+            },
             modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+            enabled = !isLoading
         )
         
         Spacer(modifier = Modifier.height(16.dp))
-
-        // Email field
+        
         OutlinedTextField(
             value = email,
-            onValueChange = { 
-                email = it
-                errorMessage = null
-            },
+            onValueChange = { email = it },
             label = { Text("Email") },
-            leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email") },
-            modifier = Modifier.fillMaxWidth(),
+            leadingIcon = {
+                Icon(Icons.Default.Email, contentDescription = "Email")
+            },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email,
                 imeAction = ImeAction.Next
-            )
+            ),
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
         )
         
         Spacer(modifier = Modifier.height(16.dp))
-
-        // Password field
+        
         OutlinedTextField(
             value = password,
-            onValueChange = { 
-                password = it
-                errorMessage = null
-            },
+            onValueChange = { password = it },
             label = { Text("Password") },
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password") },
+            leadingIcon = {
+                Icon(Icons.Default.Lock, contentDescription = "Password")
+            },
             trailingIcon = {
                 IconButton(onClick = { showPassword = !showPassword }) {
                     Icon(
-                        imageVector = if (showPassword) Icons.Default.Person else Icons.Default.Lock,
+                        imageVector = if (showPassword) Icons.Default.Home else Icons.Default.Lock,
                         contentDescription = if (showPassword) "Hide password" else "Show password"
                     )
                 }
             },
             visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
                 imeAction = ImeAction.Next
-            )
+            ),
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
         )
         
         Spacer(modifier = Modifier.height(16.dp))
-
-        // Confirm Password field
+        
         OutlinedTextField(
             value = confirmPassword,
-            onValueChange = { 
-                confirmPassword = it
-                errorMessage = null
-            },
+            onValueChange = { confirmPassword = it },
             label = { Text("Confirm Password") },
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Confirm Password") },
+            leadingIcon = {
+                Icon(Icons.Default.Lock, contentDescription = "Confirm Password")
+            },
             trailingIcon = {
                 IconButton(onClick = { showConfirmPassword = !showConfirmPassword }) {
                     Icon(
-                        imageVector = if (showConfirmPassword) Icons.Default.Person else Icons.Default.Lock,
+                        imageVector = if (showConfirmPassword) Icons.Default.Home else Icons.Default.Lock,
                         contentDescription = if (showConfirmPassword) "Hide password" else "Show password"
                     )
                 }
             },
             visualTransformation = if (showConfirmPassword) VisualTransformation.None else PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
                 imeAction = ImeAction.Done
-            )
+            ),
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
         )
         
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Role Selection
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            FilterChip(
+                selected = selectedRole == UserRole.STUDENT,
+                onClick = { selectedRole = UserRole.STUDENT },
+                label = { Text("Student") }
+            )
+            FilterChip(
+                selected = selectedRole == UserRole.INSTRUCTOR,
+                onClick = { selectedRole = UserRole.INSTRUCTOR },
+                label = { Text("Instructor") }
+            )
+        }
+        
         Spacer(modifier = Modifier.height(32.dp))
-
+        
         Button(
             onClick = {
-                // Validate inputs
-                when {
-                    name.isBlank() -> {
-                        errorMessage = "Please enter your name"
-                        return@Button
-                    }
-                    email.isBlank() -> {
-                        errorMessage = "Please enter your email"
-                        return@Button
-                    }
-                    password.isBlank() -> {
-                        errorMessage = "Please enter a password"
-                        return@Button
-                    }
-                    password.length < 6 -> {
-                        errorMessage = "Password must be at least 6 characters"
-                        return@Button
-                    }
-                    password != confirmPassword -> {
-                        errorMessage = "Passwords do not match"
-                        return@Button
-                    }
+                if (name.isBlank() || email.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
+                    errorMessage = "Please fill in all fields"
+                    return@Button
                 }
-
+                if (password != confirmPassword) {
+                    errorMessage = "Passwords do not match"
+                    return@Button
+                }
                 scope.launch {
                     try {
-                        val result = authViewModel.signUp(name, email, password)
-                        result.onFailure { exception ->
-                            errorMessage = exception.message ?: "Sign up failed"
-                        }
+                        authViewModel.signUp(name, email, password, selectedRole)
                     } catch (e: Exception) {
                         errorMessage = e.message ?: "Sign up failed"
                         isLoading = false
@@ -218,23 +215,16 @@ fun SignUpScreen(
                     modifier = Modifier.size(24.dp)
                 )
             } else {
-                Text("Create Account")
+                Text("Sign Up")
             }
         }
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+        TextButton(
+            onClick = { navController.navigate(Screen.Login.route) }
         ) {
-            Text("Already have an account?")
-            TextButton(
-                onClick = { navController.navigate(Screen.Login.route) }
-            ) {
-                Text("Sign In")
-            }
+            Text("Already have an account? Sign In")
         }
     }
 } 
