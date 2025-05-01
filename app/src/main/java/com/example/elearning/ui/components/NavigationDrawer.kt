@@ -21,12 +21,14 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.elearning.model.User
 import com.example.elearning.navigation.Screen
+import com.example.elearning.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NavigationDrawer(
     user: User,
     navController: NavController,
+    authViewModel: AuthViewModel,
     isDrawerOpen: Boolean,
     onDrawerStateChange: (Boolean) -> Unit,
     content: @Composable () -> Unit
@@ -199,6 +201,7 @@ fun NavigationDrawer(
                     label = { Text("Logout") },
                     selected = false,
                     onClick = {
+                        authViewModel.signOut()
                         navController.navigate(Screen.Login.route) {
                             popUpTo(0) { inclusive = true }
                         }

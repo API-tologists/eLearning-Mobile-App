@@ -30,23 +30,13 @@ fun NavGraph(
         composable(Screen.Login.route) {
             LoginScreen(
                 navController = navController,
-                authViewModel = authViewModel,
-                onLoginSuccess = {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
-                    }
-                }
+                authViewModel = authViewModel
             )
         }
         composable(Screen.SignUp.route) {
             SignUpScreen(
                 navController = navController,
-                onSignUp = { name, email, password, confirmPassword ->
-                    // TODO: Implement sign up logic
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.SignUp.route) { inclusive = true }
-                    }
-                }
+                authViewModel = authViewModel
             )
         }
         composable(Screen.Home.route) {

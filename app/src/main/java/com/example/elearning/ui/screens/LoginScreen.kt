@@ -6,16 +6,15 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.ThumbUp
-import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Lock
+
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -24,24 +23,48 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.elearning.R
 import com.example.elearning.navigation.Screen
 import com.example.elearning.viewmodel.AuthViewModel
+import com.example.elearning.model.AuthState
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     navController: NavController,
-    authViewModel: AuthViewModel,
-    onLoginSuccess: () -> Unit
+    authViewModel: AuthViewModel
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var showPassword by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    
+    val scope = rememberCoroutineScope()
+    
+    // Observe auth state
+    val authState by authViewModel.authState.collectAsState()
+    
+    // Handle auth state changes
+    LaunchedEffect(authState) {
+        when (authState) {
+            is AuthState.Authenticated -> {
+                navController.navigate(Screen.Home.route) {
+                    popUpTo(Screen.Login.route) { inclusive = true }
+                }
+            }
+            is AuthState.Unauthenticated -> {
+                isLoading = false
+            }
+            AuthState.Loading -> {
+                isLoading = true
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -133,7 +156,7 @@ fun LoginScreen(
                 trailingIcon = {
                     IconButton(onClick = { showPassword = !showPassword }) {
                         Icon(
-                            imageVector = if (showPassword) Icons.Default.ThumbUp else Icons.Default.Lock,
+                            imageVector = if (showPassword) Icons.Outlined.Home else Icons.Outlined.Lock,
                             contentDescription = if (showPassword) "Hide password" else "Show password"
                         )
                     }
@@ -161,9 +184,14 @@ fun LoginScreen(
                         errorMessage = "Please fill in all fields"
                         return@Button
                     }
-                    isLoading = true
-                    authViewModel.signIn(email, password)
-                    onLoginSuccess()
+                    scope.launch {
+                        try {
+                            authViewModel.signIn(email, password)
+                        } catch (e: Exception) {
+                            errorMessage = e.message ?: "Sign in failed"
+                            isLoading = false
+                        }
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -171,7 +199,8 @@ fun LoginScreen(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary
-                )
+                ),
+                enabled = !isLoading
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(

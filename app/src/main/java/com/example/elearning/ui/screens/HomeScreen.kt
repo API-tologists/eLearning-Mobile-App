@@ -54,6 +54,7 @@ fun HomeScreen(
         NavigationDrawer(
             user = user,
             navController = navController,
+            authViewModel = authViewModel,
             isDrawerOpen = showDrawer,
             onDrawerStateChange = { showDrawer = it }
         ) {
