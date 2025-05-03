@@ -90,36 +90,10 @@ class CourseViewModel : ViewModel() {
         }
     }
     
-    fun enrollInCourse(courseId: String, studentId: String) {
+    fun enrollInCourse(studentId: String, courseId: String) {
         viewModelScope.launch {
             try {
-                Log.d(TAG, "Starting enrollment process for student $studentId in course $courseId")
-                // Create enrollment document
-                val enrollment = CourseEnrollment(
-                    courseId = courseId,
-                    studentId = studentId,
-                    progress = 0,
-                    enrolledDate = System.currentTimeMillis()
-                )
-                // Add enrollment to Firestore with correct document ID format
-                val enrollmentDocId = "${courseId}_${studentId}"
-                Log.d(TAG, "Creating enrollment document with ID: $enrollmentDocId")
-                enrollmentsCollection.document(enrollmentDocId).set(enrollment).await()
-                // Update course's enrolled students count
-                val courseRef = coursesCollection.document(courseId)
-                db.runTransaction { transaction ->
-                    val course = transaction.get(courseRef).toObject(Course::class.java)
-                    if (course != null) {
-                        val updatedCourse = course.copy(
-                            enrolledStudents = course.enrolledStudents + 1
-                        )
-                        transaction.set(courseRef, updatedCourse)
-                        Log.d(TAG, "Updated course enrollment count: ${updatedCourse.enrolledStudents}")
-                    }
-                }.await()
-                // Update user's enrolled courses
-                userRepository.enrollUserInCourse(studentId, courseId)
-                Log.d(TAG, "Successfully enrolled student $studentId in course $courseId")
+                repository.enrollInCourse(studentId, courseId)
                 // Immediately reload enrolled courses for the student so the UI updates
                 loadEnrolledCourses(studentId)
             } catch (e: Exception) {

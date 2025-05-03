@@ -43,7 +43,7 @@ fun CourseCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = course.instructor,
+                    text = course.description,
                     style = MaterialTheme.typography.bodyMedium
                 )
                 if (progress > 0) {
