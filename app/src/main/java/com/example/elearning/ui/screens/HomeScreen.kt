@@ -39,7 +39,7 @@ fun HomeScreen(
     var searchQuery by remember { mutableStateOf("") }
     var showSearchBar by remember { mutableStateOf(false) }
     
-    val courses by courseViewModel.allCourses.collectAsState(emptyList())
+    val courses by courseViewModel.courses.collectAsState(emptyList())
     val enrolledCourses by courseViewModel.enrolledCourses.collectAsState(emptyList())
     
     val filteredCourses = remember(searchQuery) {

@@ -46,7 +46,8 @@ fun NavGraph(
                     InstructorDashboardScreen(
                         navController = navController,
                         user = user,
-                        courseViewModel = courseViewModel
+                        courseViewModel = courseViewModel,
+                        authViewModel = authViewModel
                     )
                 } else {
                     HomeScreen(
@@ -108,6 +109,17 @@ fun NavGraph(
                 courseId = courseId,
                 sectionId = sectionId,
                 lessonIndex = lessonIndex
+            )
+        }
+        composable(
+            route = Screen.CourseEditor.route,
+            arguments = Screen.CourseEditor.arguments
+        ) { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: return@composable
+            CourseEditorScreen(
+                navController = navController,
+                courseId = courseId,
+                courseViewModel = courseViewModel
             )
         }
     }

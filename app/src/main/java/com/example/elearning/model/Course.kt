@@ -70,4 +70,7 @@ data class CourseEnrollment(
             "completedLessons" to completedLessons
         )
     }
-} 
+}
+
+
+

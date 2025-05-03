@@ -26,4 +26,10 @@ sealed class Screen(val route: String) {
             "lesson/$courseId/$sectionId/$lessonIndex"
     }
     object InstructorDashboard : Screen("instructor_dashboard")
+    object CourseEditor : Screen("course_editor/{courseId}") {
+        val arguments = listOf(
+            navArgument("courseId") { type = NavType.StringType }
+        )
+        fun createRoute(courseId: String) = "course_editor/$courseId"
+    }
 } 
