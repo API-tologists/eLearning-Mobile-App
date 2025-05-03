@@ -73,7 +73,7 @@ class CourseViewModel : ViewModel() {
     fun loadInstructorCourses(instructorId: String) {
         viewModelScope.launch {
             try {
-                val snapshot = coursesCollection.whereEqualTo("instructorId", instructorId).get().await()
+                val snapshot = coursesCollection.whereEqualTo("instructor", instructorId).get().await()
                 _instructorCourses.value = snapshot.toObjects(Course::class.java)
             } catch (e: Exception) {
                 // Handle error
@@ -181,7 +181,7 @@ class CourseViewModel : ViewModel() {
                     id = courseId,
                     title = title,
                     description = description,
-                    instructor = instructor,
+                    instructor = instructorId,
                     imageUrl = imageUrl,
                     sections = sections
                 )
