@@ -20,6 +20,9 @@ import com.example.elearning.model.CourseSection
 import com.example.elearning.model.Lesson
 import com.example.elearning.viewmodel.CourseViewModel
 import kotlinx.coroutines.launch
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -218,8 +221,24 @@ fun CourseEditorScreen(
     if (showAddLessonDialog.first && course != null && showAddLessonDialog.second >= 0) {
         var lessonTitle by remember { mutableStateOf("") }
         var lessonDescription by remember { mutableStateOf("") }
-        var lessonVideoUrl by remember { mutableStateOf("") }
         var lessonDuration by remember { mutableStateOf("") }
+
+        // File picker state
+        val videoUri = remember { mutableStateOf<Uri?>(null) }
+        val pdfUri = remember { mutableStateOf<Uri?>(null) }
+        val imageUri = remember { mutableStateOf<Uri?>(null) }
+
+        // File pickers
+        val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            videoUri.value = uri
+        }
+        val pdfPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            pdfUri.value = uri
+        }
+        val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            imageUri.value = uri
+        }
+
         AlertDialog(
             onDismissRequest = { showAddLessonDialog = false to -1 },
             title = { Text("Add Lesson") },
@@ -238,17 +257,20 @@ fun CourseEditorScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
-                        value = lessonVideoUrl,
-                        onValueChange = { lessonVideoUrl = it },
-                        label = { Text("Video URL") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
                         value = lessonDuration,
                         onValueChange = { lessonDuration = it },
                         label = { Text("Duration") },
                         modifier = Modifier.fillMaxWidth()
                     )
+                    Button(onClick = { videoPicker.launch("video/*") }) {
+                        Text(if (videoUri.value != null) "Video Selected" else "Select Video")
+                    }
+                    Button(onClick = { pdfPicker.launch("application/pdf") }) {
+                        Text(if (pdfUri.value != null) "PDF Selected" else "Select PDF")
+                    }
+                    Button(onClick = { imagePicker.launch("image/*") }) {
+                        Text(if (imageUri.value != null) "Image Selected" else "Select Image")
+                    }
                 }
             },
             confirmButton = {
@@ -256,13 +278,15 @@ fun CourseEditorScreen(
                     if (lessonTitle.isNotBlank()) {
                         course?.let { currentCourse ->
                             val sectionId = currentCourse.sections[showAddLessonDialog.second].id
-                            courseViewModel.addLessonToSection(
+                            courseViewModel.addLessonWithFiles(
                                 courseId = currentCourse.id,
                                 sectionId = sectionId,
                                 lessonTitle = lessonTitle,
                                 lessonDescription = lessonDescription,
-                                lessonVideoUrl = lessonVideoUrl,
-                                lessonDuration = lessonDuration
+                                lessonDuration = lessonDuration,
+                                videoUri = videoUri.value,
+                                pdfUri = pdfUri.value,
+                                imageUri = imageUri.value
                             )
                         }
                         showAddLessonDialog = false to -1

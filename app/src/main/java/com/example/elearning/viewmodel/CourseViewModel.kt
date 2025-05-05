@@ -18,6 +18,9 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 
 class CourseViewModel : ViewModel() {
     private val TAG = "CourseViewModel"
@@ -255,7 +258,9 @@ class CourseViewModel : ViewModel() {
         lessonTitle: String,
         lessonDescription: String,
         lessonVideoUrl: String,
-        lessonDuration: String
+        lessonDuration: String,
+        lessonPdfUrl: String = "",
+        lessonImageUrl: String = ""
     ) {
         viewModelScope.launch {
             try {
@@ -267,7 +272,9 @@ class CourseViewModel : ViewModel() {
                             title = lessonTitle,
                             description = lessonDescription,
                             videoUrl = lessonVideoUrl,
-                            duration = lessonDuration
+                            duration = lessonDuration,
+                            pdfUrl = lessonPdfUrl,
+                            imageUrl = lessonImageUrl
                         )
                         section.copy(lessons = section.lessons + newLesson)
                     } else section
@@ -306,6 +313,34 @@ class CourseViewModel : ViewModel() {
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading course", e)
             }
+        }
+    }
+    
+    fun addLessonWithFiles(
+        courseId: String,
+        sectionId: String,
+        lessonTitle: String,
+        lessonDescription: String,
+        lessonDuration: String,
+        videoUri: Uri?,
+        pdfUri: Uri?,
+        imageUri: Uri?
+    ) {
+        viewModelScope.launch {
+            val videoUrl = videoUri?.let { repository.uploadFileToStorage(it, "lessons/videos/${System.currentTimeMillis()}") } ?: ""
+            val pdfUrl = pdfUri?.let { repository.uploadFileToStorage(it, "lessons/pdfs/${System.currentTimeMillis()}") } ?: ""
+            val imageUrl = imageUri?.let { repository.uploadFileToStorage(it, "lessons/images/${System.currentTimeMillis()}") } ?: ""
+
+            addLessonToSection(
+                courseId = courseId,
+                sectionId = sectionId,
+                lessonTitle = lessonTitle,
+                lessonDescription = lessonDescription,
+                lessonVideoUrl = videoUrl,
+                lessonDuration = lessonDuration,
+                lessonPdfUrl = pdfUrl,
+                lessonImageUrl = imageUrl
+            )
         }
     }
 } 

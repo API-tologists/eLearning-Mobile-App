@@ -11,6 +11,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import com.google.firebase.storage.FirebaseStorage
 
 class CourseRepository {
     private val db = FirebaseFirestore.getInstance()
@@ -169,13 +170,24 @@ class CourseRepository {
         }.await()
     }
 
-    suspend fun addLessonToSection(courseId: String, sectionId: String, lessonTitle: String, lessonDescription: String = "", lessonVideoUrl: String = "", lessonDuration: String = "") {
+    suspend fun addLessonToSection(
+        courseId: String,
+        sectionId: String,
+        lessonTitle: String,
+        lessonDescription: String = "",
+        lessonVideoUrl: String = "",
+        lessonDuration: String = "",
+        lessonPdfUrl: String = "",
+        lessonImageUrl: String = ""
+    ) {
         val lesson = Lesson(
             id = "${sectionId}_${System.currentTimeMillis()}",
             title = lessonTitle,
             description = lessonDescription,
             videoUrl = lessonVideoUrl,
             duration = lessonDuration,
+            pdfUrl = lessonPdfUrl,
+            imageUrl = lessonImageUrl,
             completed = false
         )
         val courseRef = coursesCollection.document(courseId)
@@ -206,5 +218,11 @@ class CourseRepository {
         // This should be implemented to fetch the course and count all lessons in all sections
         // For now, return 0
         return 0
+    }
+
+    suspend fun uploadFileToStorage(uri: android.net.Uri, path: String): String {
+        val storageRef = FirebaseStorage.getInstance().reference.child(path)
+        storageRef.putFile(uri).await()
+        return storageRef.downloadUrl.await().toString()
     }
 } 
