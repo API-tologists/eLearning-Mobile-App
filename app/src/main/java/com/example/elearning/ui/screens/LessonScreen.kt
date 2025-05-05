@@ -35,6 +35,12 @@ fun LessonScreen(
 
     var isCompleted by remember { mutableStateOf(currentLesson?.isCompleted ?: false) }
 
+    LaunchedEffect(course) {
+        currentLesson?.let { lesson ->
+            isCompleted = lesson.isCompleted
+        }
+    }
+
     LaunchedEffect(courseId) {
         courseViewModel.loadCourseById(courseId)
     }
@@ -163,6 +169,22 @@ fun LessonScreen(
 
                 Button(
                     onClick = { 
+                        // Mark current lesson as completed and update progress
+                        if (!isCompleted) {
+                            isCompleted = true
+                            currentLesson?.id?.let { lessonId ->
+                                val authState = authViewModel.authState.value
+                                if (authState is com.example.elearning.model.AuthState.Authenticated) {
+                                    courseViewModel.updateCourseProgress(
+                                        userId = authState.user.id,
+                                        courseId = courseId,
+                                        lessonId = lessonId
+                                    )
+                                }
+                            }
+                        }
+
+                        // Navigate to next lesson
                         if (hasNextLesson) {
                             // Navigate to next lesson in current section
                             navController.navigate(

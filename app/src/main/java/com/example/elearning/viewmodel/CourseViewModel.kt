@@ -105,25 +105,77 @@ class CourseViewModel : ViewModel() {
     fun updateCourseProgress(userId: String, courseId: String, lessonId: String) {
         viewModelScope.launch {
             try {
-                val enrollmentRef = enrollmentsCollection.document("${courseId}_${userId}")
-                db.runTransaction { transaction ->
-                    val enrollment = transaction.get(enrollmentRef).toObject(CourseEnrollment::class.java)
-                    if (enrollment != null) {
-                        val updatedCompletedLessons = enrollment.completedLessons + lessonId
-                        val totalLessons = _selectedCourse.value?.sections?.sumOf { it.lessons.size } ?: 0
-                        val progress = if (totalLessons > 0) {
-                            (updatedCompletedLessons.size * 100) / totalLessons
-                        } else 0
-                        
-                        val updatedEnrollment = enrollment.copy(
-                            completedLessons = updatedCompletedLessons,
-                            progress = progress
-                        )
-                        transaction.set(enrollmentRef, updatedEnrollment)
-                    }
-                }.await()
+                Log.d(TAG, "Starting progress update for user $userId in course $courseId for lesson $lessonId")
                 
-                Log.d(TAG, "Progress updated for user $userId in course $courseId")
+                // Get the enrollment document
+                val enrollmentQuery = enrollmentsCollection
+                    .whereEqualTo("studentId", userId)
+                    .whereEqualTo("courseId", courseId)
+                    .get()
+                    .await()
+                
+                if (enrollmentQuery.isEmpty) {
+                    Log.e(TAG, "No enrollment found for user $userId in course $courseId")
+                    return@launch
+                }
+                
+                val enrollmentDoc = enrollmentQuery.documents[0]
+                val enrollment = enrollmentDoc.toObject(CourseEnrollment::class.java)
+                
+                if (enrollment == null) {
+                    Log.e(TAG, "Failed to parse enrollment document")
+                    return@launch
+                }
+                
+                Log.d(TAG, "Current enrollment state: completedLessons=${enrollment.completedLessons}, progress=${enrollment.progress}")
+                
+                // Get the course to calculate total lessons
+                val courseRef = coursesCollection.document(courseId)
+                val course = courseRef.get().await().toObject(Course::class.java)
+                val totalLessons = course?.sections?.sumOf { it.lessons.size } ?: 0
+                
+                if (totalLessons > 0 && course != null) {
+                    // Add the new lesson to completed lessons if not already completed
+                    val updatedCompletedLessons = if (!enrollment.completedLessons.contains(lessonId)) {
+                        enrollment.completedLessons + lessonId
+                    } else {
+                        enrollment.completedLessons
+                    }
+                    
+                    // Calculate progress based on completed lessons vs total lessons
+                    val progress = (updatedCompletedLessons.size * 100) / totalLessons
+                    
+                    val updatedEnrollment = enrollment.copy(
+                        completedLessons = updatedCompletedLessons,
+                        progress = progress
+                    )
+                    
+                    // Update the enrollment document
+                    enrollmentDoc.reference.set(updatedEnrollment).await()
+                    
+                    // Update the course's lesson completion status
+                    val updatedSections = course.sections.map { section ->
+                        section.copy(
+                            lessons = section.lessons.map { lesson ->
+                                if (lesson.id == lessonId) {
+                                    lesson.copy(isCompleted = true)
+                                } else lesson
+                            }
+                        )
+                    }
+                    val updatedCourse = course.copy(sections = updatedSections)
+                    
+                    // Update the course document
+                    courseRef.set(updatedCourse).await()
+                    
+                    // Update the local state
+                    _selectedCourse.value = updatedCourse
+                    
+                    Log.d(TAG, "Progress updated successfully: ${updatedCompletedLessons.size}/$totalLessons lessons completed (${progress}%)")
+                    Log.d(TAG, "Course document updated with lesson completion status")
+                } else {
+                    Log.e(TAG, "Invalid course or total lessons count")
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating course progress", e)
             }
