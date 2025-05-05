@@ -6,6 +6,8 @@ import androidx.compose.runtime.getValue
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 import com.example.elearning.model.AuthState
 import com.example.elearning.model.UserRole
 import com.example.elearning.ui.screens.*
@@ -99,7 +101,12 @@ fun NavGraph(
             )
         }
         composable(
-            route = Screen.Lesson.route
+            route = Screen.Lesson.route,
+            arguments = listOf(
+                navArgument("courseId") { type = NavType.StringType },
+                navArgument("sectionId") { type = NavType.StringType },
+                navArgument("lessonIndex") { type = NavType.IntType }
+            )
         ) { backStackEntry ->
             val courseId = backStackEntry.arguments?.getString("courseId") ?: return@composable
             val sectionId = backStackEntry.arguments?.getString("sectionId") ?: return@composable
@@ -108,7 +115,9 @@ fun NavGraph(
                 navController = navController,
                 courseId = courseId,
                 sectionId = sectionId,
-                lessonIndex = lessonIndex
+                lessonIndex = lessonIndex,
+                courseViewModel = courseViewModel,
+                authViewModel = authViewModel
             )
         }
         composable(

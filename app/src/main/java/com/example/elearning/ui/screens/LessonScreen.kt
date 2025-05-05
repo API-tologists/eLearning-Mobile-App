@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -11,6 +12,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.elearning.model.Lesson
+import com.example.elearning.navigation.Screen
+import com.example.elearning.viewmodel.CourseViewModel
+import com.example.elearning.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -19,25 +23,26 @@ fun LessonScreen(
     sectionId: String,
     lessonIndex: Int,
     navController: NavController,
+    courseViewModel: CourseViewModel,
+    authViewModel: AuthViewModel,
     modifier: Modifier = Modifier
 ) {
-    // In a real app, this would come from a ViewModel
-    val lesson = remember {
-        Lesson(
-            id = "$courseId-$sectionId-$lessonIndex",
-            title = "Introduction to Android Development",
-            duration = "15:00",
-            videoUrl = "https://example.com/video.mp4",
-            isCompleted = false
-        )
-    }
+    val course by courseViewModel.selectedCourse.collectAsState()
+    val currentSection = course?.sections?.find { it.id == sectionId }
+    val currentLesson = currentSection?.lessons?.getOrNull(lessonIndex)
+    val hasNextLesson = currentSection?.lessons?.size?.let { it > lessonIndex + 1 } ?: false
+    val hasNextSection = course?.sections?.indexOf(currentSection)?.let { it < (course?.sections?.size ?: 0) - 1 } ?: false
 
-    var isCompleted by remember { mutableStateOf(lesson.isCompleted) }
+    var isCompleted by remember { mutableStateOf(currentLesson?.isCompleted ?: false) }
+
+    LaunchedEffect(courseId) {
+        courseViewModel.loadCourseById(courseId)
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(lesson.title) },
+                title = { Text(currentLesson?.title ?: "Lesson") },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -45,7 +50,7 @@ fun LessonScreen(
                 },
                 actions = {
                     IconButton(onClick = { /* Add to bookmarks */ }) {
-                        Icon(Icons.Default.AccountBox, contentDescription = "Bookmark")
+                        Icon(Icons.Outlined.Star, contentDescription = "Bookmark")
                     }
                 }
             )
@@ -67,7 +72,7 @@ fun LessonScreen(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        Icons.Default.AccountBox,
+                        Icons.Default.PlayArrow,
                         contentDescription = "Play",
                         modifier = Modifier.size(64.dp)
                     )
@@ -76,54 +81,7 @@ fun LessonScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Duration: ${lesson.duration}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = if (isCompleted) "Completed" else "Mark as Complete",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Checkbox(
-                        checked = isCompleted,
-                        onCheckedChange = { isCompleted = it }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Button(
-                    onClick = { /* Navigate to previous lesson */ },
-                    enabled = lessonIndex > 0
-                ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Previous")
-                }
-
-                Button(
-                    onClick = { /* Navigate to next lesson */ }
-                ) {
-                    Text("Next")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Icon(Icons.Default.PlayArrow, contentDescription = null)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Resources section
+            // Lesson content
             Card(
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -133,20 +91,107 @@ fun LessonScreen(
                         .padding(16.dp)
                 ) {
                     Text(
-                        text = "Resources",
-                        style = MaterialTheme.typography.titleMedium
+                        text = currentLesson?.description ?: "",
+                        style = MaterialTheme.typography.bodyLarge
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    ResourceItem(
-                        icon = Icons.Default.DateRange,
-                        title = "Lesson Notes",
-                        onClick = { /* Download or view notes */ }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Progress and completion
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Duration: ${currentLesson?.duration ?: ""}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = if (isCompleted) "Completed" else "Mark as Complete",
+                        style = MaterialTheme.typography.bodyMedium
                     )
-                    ResourceItem(
-                        icon = Icons.Default.AccountBox,
-                        title = "Exercise Files",
-                        onClick = { /* Download exercise files */ }
+                    Checkbox(
+                        checked = isCompleted,
+                        onCheckedChange = { 
+                            isCompleted = it
+                            if (it) {
+                                currentLesson?.id?.let { lessonId ->
+                                    val authState = authViewModel.authState.value
+                                    if (authState is com.example.elearning.model.AuthState.Authenticated) {
+                                        courseViewModel.updateCourseProgress(
+                                            userId = authState.user.id,
+                                            courseId = courseId,
+                                            lessonId = lessonId
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     )
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Navigation buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Button(
+                    onClick = { 
+                        if (lessonIndex > 0) {
+                            navController.navigate(
+                                Screen.Lesson.createRoute(
+                                    courseId = courseId,
+                                    sectionId = sectionId,
+                                    lessonIndex = lessonIndex - 1
+                                )
+                            )
+                        }
+                    },
+                    enabled = lessonIndex > 0
+                ) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Previous")
+                }
+
+                Button(
+                    onClick = { 
+                        if (hasNextLesson) {
+                            // Navigate to next lesson in current section
+                            navController.navigate(
+                                Screen.Lesson.createRoute(
+                                    courseId = courseId,
+                                    sectionId = sectionId,
+                                    lessonIndex = lessonIndex + 1
+                                )
+                            )
+                        } else if (hasNextSection) {
+                            // Navigate to first lesson of next section
+                            val nextSectionIndex = course?.sections?.indexOf(currentSection)?.plus(1) ?: 0
+                            val nextSection = course?.sections?.getOrNull(nextSectionIndex)
+                            nextSection?.let {
+                                navController.navigate(
+                                    Screen.Lesson.createRoute(
+                                        courseId = courseId,
+                                        sectionId = it.id,
+                                        lessonIndex = 0
+                                    )
+                                )
+                            }
+                        }
+                    },
+                    enabled = hasNextLesson || hasNextSection
+                ) {
+                    Text("Next")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(Icons.Default.ArrowForward, contentDescription = null)
                 }
             }
         }

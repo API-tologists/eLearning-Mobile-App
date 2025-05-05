@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -58,7 +60,7 @@ fun CourseDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Course Details") },
+                title = { Text(course?.title ?: "Course Details") },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -66,78 +68,77 @@ fun CourseDetailScreen(
                 }
             )
         }
-    ) { padding ->
-        course?.let { currentCourse ->
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                item {
-                    AsyncImage(
-                        model = currentCourse.imageUrl,
-                        contentDescription = "Course Image",
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            item {
+                // Course header
+                course?.let { currentCourse ->
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(200.dp)
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Text(
-                        text = currentCourse.title,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Text(
-                        text = "Instructor: ${currentCourse.instructor}",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .padding(16.dp)
                     ) {
+                        // Course image
+                        AsyncImage(
+                            model = currentCourse.imageUrl,
+                            contentDescription = currentCourse.title,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentScale = ContentScale.Crop
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Course info
                         Text(
-                            text = "Rating: ${currentCourse.rating}",
+                            text = currentCourse.title,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = currentCourse.description,
                             style = MaterialTheme.typography.bodyLarge
                         )
-                        Text(
-                            text = "Duration: ${currentCourse.duration}",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Text(
-                        text = currentCourse.description,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    if (user != null) {
-                        if (isEnrolled) {
-                            Text(
-                                text = "Progress: $courseProgress%",
-                                style = MaterialTheme.typography.titleMedium
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Course stats
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            CourseStat(
+                                icon = Icons.Default.Person,
+                                label = "Students",
+                                value = currentCourse.enrolledStudents.toString()
                             )
-                            LinearProgressIndicator(
-                                progress = { courseProgress / 100f },
-                                modifier = Modifier.fillMaxWidth()
+                            CourseStat(
+                                icon = Icons.Default.Star,
+                                label = "Rating",
+                                value = currentCourse.rating.toString()
                             )
-                        } else {
+                            CourseStat(
+                                icon = Icons.Outlined.PlayArrow,
+                                label = "Duration",
+                                value = currentCourse.duration
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Enroll button
+                        if (!isEnrolled) {
                             Button(
                                 onClick = {
-                                    user.id?.let { userId ->
+                                    user?.id?.let { userId ->
                                         courseViewModel.enrollInCourse(userId, currentCourse.id)
                                         isEnrolled = true
                                     }
@@ -149,12 +150,52 @@ fun CourseDetailScreen(
                         }
                     }
                 }
-                
+            }
+
+            // Course sections
+            course?.let { currentCourse ->
                 items(currentCourse.sections) { section ->
-                    CourseSectionItem(section = section)
+                    CourseSection(
+                        section = section,
+                        onLessonClick = { lessonIndex ->
+                            navController.navigate(
+                                Screen.Lesson.createRoute(
+                                    courseId = courseId,
+                                    sectionId = section.id,
+                                    lessonIndex = lessonIndex
+                                )
+                            )
+                        }
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun CourseStat(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall
+        )
     }
 }
 
@@ -233,7 +274,7 @@ private fun CourseSection(
                 trailingContent = {
                     IconButton(onClick = { expanded = !expanded }) {
                         Icon(
-                            if (expanded) Icons.Default.Phone else Icons.Default.Favorite,
+                            imageVector = if (expanded) Icons.Default.Info else Icons.Default.Info,
                             contentDescription = if (expanded) "Collapse" else "Expand"
                         )
                     }
@@ -256,8 +297,8 @@ private fun CourseSection(
                             supportingContent = { Text(text = lesson.duration) },
                             leadingContent = {
                                 Icon(
-                                    if (lesson.isCompleted) Icons.Default.Check else Icons.Default.Lock,
-                                    contentDescription = if (lesson.isCompleted) "Completed" else "Locked"
+                                    if (lesson.isCompleted) Icons.Default.Check else Icons.Default.PlayArrow,
+                                    contentDescription = if (lesson.isCompleted) "Completed" else "Not Completed"
                                 )
                             },
                             modifier = Modifier.clickable { onLessonClick(index) }
