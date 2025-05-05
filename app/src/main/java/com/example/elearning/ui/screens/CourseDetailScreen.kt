@@ -233,9 +233,9 @@ private fun LessonItem(lesson: Lesson) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = if (lesson.isCompleted) Icons.Default.CheckCircle else Icons.Default.PlayArrow,
-            contentDescription = if (lesson.isCompleted) "Completed" else "Not Completed",
-            tint = if (lesson.isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            imageVector = if (lesson.completed) Icons.Default.CheckCircle else Icons.Default.PlayArrow,
+            contentDescription = if (lesson.completed) "Completed" else "Not Completed",
+            tint = if (lesson.completed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
         )
         
         Spacer(modifier = Modifier.width(16.dp))
@@ -297,8 +297,8 @@ private fun CourseSection(
                             supportingContent = { Text(text = lesson.duration) },
                             leadingContent = {
                                 Icon(
-                                    if (lesson.isCompleted) Icons.Default.Check else Icons.Default.PlayArrow,
-                                    contentDescription = if (lesson.isCompleted) "Completed" else "Not Completed"
+                                    if (lesson.completed) Icons.Default.Check else Icons.Default.PlayArrow,
+                                    contentDescription = if (lesson.completed) "Completed" else "Not Completed"
                                 )
                             },
                             modifier = Modifier.clickable { onLessonClick(index) }

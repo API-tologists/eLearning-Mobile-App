@@ -158,7 +158,7 @@ class CourseViewModel : ViewModel() {
                         section.copy(
                             lessons = section.lessons.map { lesson ->
                                 if (lesson.id == lessonId) {
-                                    lesson.copy(isCompleted = true)
+                                    lesson.copy(completed = true)
                                 } else lesson
                             }
                         )

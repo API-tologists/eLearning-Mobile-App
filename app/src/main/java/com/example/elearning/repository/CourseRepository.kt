@@ -176,7 +176,7 @@ class CourseRepository {
             description = lessonDescription,
             videoUrl = lessonVideoUrl,
             duration = lessonDuration,
-            isCompleted = false
+            completed = false
         )
         val courseRef = coursesCollection.document(courseId)
         db.runTransaction { transaction ->

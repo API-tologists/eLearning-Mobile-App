@@ -1,5 +1,6 @@
 package com.example.elearning.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -33,16 +34,17 @@ fun LessonScreen(
     val hasNextLesson = currentSection?.lessons?.size?.let { it > lessonIndex + 1 } ?: false
     val hasNextSection = course?.sections?.indexOf(currentSection)?.let { it < (course?.sections?.size ?: 0) - 1 } ?: false
 
-    var isCompleted by remember { mutableStateOf(currentLesson?.isCompleted ?: false) }
+    var completed by remember { mutableStateOf(false) }
 
-    LaunchedEffect(course) {
-        currentLesson?.let { lesson ->
-            isCompleted = lesson.isCompleted
-        }
+    LaunchedEffect(Unit) {
+        courseViewModel.loadCourseById(courseId)
     }
 
-    LaunchedEffect(courseId) {
-        courseViewModel.loadCourseById(courseId)
+    LaunchedEffect(course, currentLesson) {
+        currentLesson?.let { lesson ->
+            completed = lesson.completed
+            Log.d("LessonScreen", "Lesson completion status updated: "+lesson.completed)
+        }
     }
 
     Scaffold(
@@ -117,13 +119,13 @@ fun LessonScreen(
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = if (isCompleted) "Completed" else "Mark as Complete",
+                        text = if (completed) "Completed" else "Mark as Complete",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Checkbox(
-                        checked = isCompleted,
+                        checked = completed,
                         onCheckedChange = { 
-                            isCompleted = it
+                            completed = it
                             if (it) {
                                 currentLesson?.id?.let { lessonId ->
                                     val authState = authViewModel.authState.value
@@ -170,8 +172,8 @@ fun LessonScreen(
                 Button(
                     onClick = { 
                         // Mark current lesson as completed and update progress
-                        if (!isCompleted) {
-                            isCompleted = true
+                        if (!completed) {
+                            completed = true
                             currentLesson?.id?.let { lessonId ->
                                 val authState = authViewModel.authState.value
                                 if (authState is com.example.elearning.model.AuthState.Authenticated) {
