@@ -1,6 +1,9 @@
 package com.example.elearning.ui.screens
 
 import android.util.Log
+import android.view.ViewGroup
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -10,8 +13,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.elearning.model.Lesson
 import com.example.elearning.navigation.Screen
 import com.example.elearning.viewmodel.CourseViewModel
@@ -35,6 +45,7 @@ fun LessonScreen(
     val hasNextSection = course?.sections?.indexOf(currentSection)?.let { it < (course?.sections?.size ?: 0) - 1 } ?: false
 
     var completed by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         courseViewModel.loadCourseById(courseId)
@@ -71,18 +82,81 @@ fun LessonScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Video player placeholder
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(16f / 9f),
-                color = MaterialTheme.colorScheme.secondaryContainer
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.PlayArrow,
-                        contentDescription = "Play",
-                        modifier = Modifier.size(64.dp)
+            // Video player
+            if (!currentLesson?.videoUrl.isNullOrEmpty()) {
+                val exoPlayer = remember {
+                    ExoPlayer.Builder(context).build().apply {
+                        setMediaItem(MediaItem.fromUri(currentLesson?.videoUrl ?: ""))
+                        prepare()
+                    }
+                }
+
+                DisposableEffect(Unit) {
+                    onDispose {
+                        exoPlayer.release()
+                    }
+                }
+
+                AndroidView(
+                    factory = { context ->
+                        PlayerView(context).apply {
+                            player = exoPlayer
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT
+                            )
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // PDF viewer
+            if (!currentLesson?.pdfUrl.isNullOrEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    AndroidView(
+                        factory = { context ->
+                            WebView(context).apply {
+                                layoutParams = ViewGroup.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.WRAP_CONTENT
+                                )
+                                webViewClient = WebViewClient()
+                                settings.apply {
+                                    javaScriptEnabled = true
+                                    loadWithOverviewMode = true
+                                    useWideViewPort = true
+                                }
+                                loadUrl("https://docs.google.com/gview?embedded=true&url=${currentLesson?.pdfUrl}")
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(400.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Image viewer
+            if (!currentLesson?.imageUrl.isNullOrEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    AsyncImage(
+                        model = currentLesson?.imageUrl,
+                        contentDescription = "Lesson image",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(16f / 9f),
+                        contentScale = ContentScale.Fit
                     )
                 }
             }
