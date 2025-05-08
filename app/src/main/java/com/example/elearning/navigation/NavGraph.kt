@@ -131,5 +131,20 @@ fun NavGraph(
                 courseViewModel = courseViewModel
             )
         }
+        composable(
+            route = Screen.LessonDetails.route,
+            arguments = Screen.LessonDetails.arguments
+        ) { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: return@composable
+            val sectionId = backStackEntry.arguments?.getString("sectionId") ?: return@composable
+            val lessonId = backStackEntry.arguments?.getString("lessonId") ?: return@composable
+            LessonDetailsScreen(
+                navController = navController,
+                courseId = courseId,
+                sectionId = sectionId,
+                lessonId = lessonId,
+                courseViewModel = courseViewModel
+            )
+        }
     }
 }

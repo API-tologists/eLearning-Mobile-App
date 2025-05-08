@@ -435,4 +435,132 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
         // Add awaitClose to properly clean up the flow
         awaitClose()
     }
+
+    fun updateLesson(
+        courseId: String,
+        sectionId: String,
+        lessonId: String,
+        title: String,
+        description: String,
+        duration: String
+    ) {
+        viewModelScope.launch {
+            try {
+                val course = _selectedCourse.value ?: return@launch
+                val updatedSections = course.sections.map { section ->
+                    if (section.id == sectionId) {
+                        val updatedLessons = section.lessons.map { lesson ->
+                            if (lesson.id == lessonId) {
+                                lesson.copy(
+                                    title = title,
+                                    description = description,
+                                    duration = duration
+                                )
+                            } else lesson
+                        }
+                        section.copy(lessons = updatedLessons)
+                    } else section
+                }
+                val updatedCourse = course.copy(sections = updatedSections)
+                
+                // Update the course in Firestore
+                coursesCollection.document(courseId).set(updatedCourse).await()
+                _selectedCourse.value = updatedCourse
+                
+                Log.d(TAG, "Lesson updated successfully: $title")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating lesson", e)
+            }
+        }
+    }
+
+    fun deleteLesson(courseId: String, sectionId: String, lessonId: String) {
+        viewModelScope.launch {
+            try {
+                val course = _selectedCourse.value ?: return@launch
+                val updatedSections = course.sections.map { section ->
+                    if (section.id == sectionId) {
+                        section.copy(lessons = section.lessons.filter { it.id != lessonId })
+                    } else section
+                }
+                val updatedCourse = course.copy(sections = updatedSections)
+                
+                // Update the course in Firestore
+                coursesCollection.document(courseId).set(updatedCourse).await()
+                _selectedCourse.value = updatedCourse
+                
+                Log.d(TAG, "Lesson deleted successfully")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error deleting lesson", e)
+            }
+        }
+    }
+
+    fun updateLessonMedia(
+        courseId: String,
+        sectionId: String,
+        lessonId: String,
+        mediaType: String, // "image", "video", "pdf"
+        uri: Uri
+    ) {
+        viewModelScope.launch {
+            // 1. Upload file to Firebase Storage, get downloadUrl
+            val downloadUrl = uploadFileToFirebase(uri, mediaType) // You must implement this!
+            // 2. Update lesson's media URL in Firestore
+            val course = _selectedCourse.value ?: return@launch
+            val updatedSections = course.sections.map { section ->
+                if (section.id == sectionId) {
+                    val updatedLessons = section.lessons.map { lesson ->
+                        if (lesson.id == lessonId) {
+                            when (mediaType) {
+                                "image" -> lesson.copy(imageUrl = downloadUrl)
+                                "video" -> lesson.copy(videoUrl = downloadUrl)
+                                "pdf" -> lesson.copy(pdfUrl = downloadUrl)
+                                else -> lesson
+                            }
+                        } else lesson
+                    }
+                    section.copy(lessons = updatedLessons)
+                } else section
+            }
+            val updatedCourse = course.copy(sections = updatedSections)
+            coursesCollection.document(courseId).set(updatedCourse).await()
+            _selectedCourse.value = updatedCourse
+        }
+    }
+
+    fun deleteLessonMedia(
+        courseId: String,
+        sectionId: String,
+        lessonId: String,
+        mediaType: String // "image", "video", "pdf"
+    ) {
+        viewModelScope.launch {
+            val course = _selectedCourse.value ?: return@launch
+            val updatedSections = course.sections.map { section ->
+                if (section.id == sectionId) {
+                    val updatedLessons = section.lessons.map { lesson ->
+                        if (lesson.id == lessonId) {
+                            when (mediaType) {
+                                "image" -> lesson.copy(imageUrl = "")
+                                "video" -> lesson.copy(videoUrl = "")
+                                "pdf" -> lesson.copy(pdfUrl = "")
+                                else -> lesson
+                            }
+                        } else lesson
+                    }
+                    section.copy(lessons = updatedLessons)
+                } else section
+            }
+            val updatedCourse = course.copy(sections = updatedSections)
+            coursesCollection.document(courseId).set(updatedCourse).await()
+            _selectedCourse.value = updatedCourse
+        }
+    }
+
+    // You must implement this function to upload to Firebase Storage and return the download URL
+    suspend fun uploadFileToFirebase(uri: Uri, mediaType: String): String {
+        // ... your upload logic here ...
+        return "https://your_download_url"
+    }
 } 

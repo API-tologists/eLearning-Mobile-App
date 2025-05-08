@@ -23,6 +23,8 @@ import kotlinx.coroutines.launch
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
+import com.example.elearning.navigation.Screen
+import androidx.compose.foundation.clickable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -153,7 +155,17 @@ fun CourseEditorScreen(
                                         section.lessons.forEach { lesson ->
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
-                                                modifier = Modifier.padding(vertical = 4.dp)
+                                                modifier = Modifier
+                                                    .padding(vertical = 4.dp)
+                                                    .clickable {
+                                                        navController.navigate(
+                                                            Screen.LessonDetails.createRoute(
+                                                                courseId = courseId,
+                                                                sectionId = section.id,
+                                                                lessonId = lesson.id
+                                                            )
+                                                        )
+                                                    }
                                             ) {
                                                 Icon(
                                                     Icons.Filled.PlayArrow,
