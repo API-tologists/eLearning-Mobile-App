@@ -1,6 +1,8 @@
 package com.example.elearning.viewmodel
 
+import android.app.Application
 import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.elearning.model.Course
@@ -10,6 +12,7 @@ import com.example.elearning.model.User
 import com.example.elearning.model.Lesson
 import com.example.elearning.repository.CourseRepository
 import com.example.elearning.repository.UserRepository
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,13 +25,14 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 
-class CourseViewModel : ViewModel() {
+class CourseViewModel(application: Application) : AndroidViewModel(application) {
     private val TAG = "CourseViewModel"
     private val repository = CourseRepository()
     private val userRepository = UserRepository()
     private val db = FirebaseFirestore.getInstance()
     private val coursesCollection = db.collection("courses")
     private val enrollmentsCollection = db.collection("enrollments")
+    private val context = application.applicationContext
     
     private val _courses = MutableStateFlow<List<Course>>(emptyList())
     val courses: StateFlow<List<Course>> = _courses
@@ -259,8 +263,8 @@ class CourseViewModel : ViewModel() {
         lessonDescription: String,
         lessonVideoUrl: String,
         lessonDuration: String,
-        lessonPdfUrl: String = "",
-        lessonImageUrl: String = ""
+        lessonPdfUrl: String,
+        lessonImageUrl: String
     ) {
         viewModelScope.launch {
             try {
@@ -327,20 +331,84 @@ class CourseViewModel : ViewModel() {
         imageUri: Uri?
     ) {
         viewModelScope.launch {
-            val videoUrl = videoUri?.let { repository.uploadFileToStorage(it, "lessons/videos/${System.currentTimeMillis()}") } ?: ""
-            val pdfUrl = pdfUri?.let { repository.uploadFileToStorage(it, "lessons/pdfs/${System.currentTimeMillis()}") } ?: ""
-            val imageUrl = imageUri?.let { repository.uploadFileToStorage(it, "lessons/images/${System.currentTimeMillis()}") } ?: ""
+            try {
+                // Check if user is authenticated
+                val currentUser = FirebaseAuth.getInstance().currentUser
+                if (currentUser == null) {
+                    Log.e(TAG, "User must be authenticated to upload files")
+                    return@launch
+                }
 
-            addLessonToSection(
-                courseId = courseId,
-                sectionId = sectionId,
-                lessonTitle = lessonTitle,
-                lessonDescription = lessonDescription,
-                lessonVideoUrl = videoUrl,
-                lessonDuration = lessonDuration,
-                lessonPdfUrl = pdfUrl,
-                lessonImageUrl = imageUrl
-            )
+                // Generate unique file names with extensions
+                val videoPath = videoUri?.let { 
+                    val extension = getFileExtension(it)
+                    "lessons/videos/${UUID.randomUUID()}$extension"
+                }
+                val pdfPath = pdfUri?.let { 
+                    val extension = getFileExtension(it)
+                    "lessons/pdfs/${UUID.randomUUID()}$extension"
+                }
+                val imagePath = imageUri?.let { 
+                    val extension = getFileExtension(it)
+                    "lessons/images/${UUID.randomUUID()}$extension"
+                }
+
+                // Upload files with proper error handling
+                val videoUrl = videoUri?.let { 
+                    try {
+                        repository.uploadFileToStorage(it, videoPath!!)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error uploading video: ${e.message}", e)
+                        ""
+                    }
+                } ?: ""
+
+                val pdfUrl = pdfUri?.let { 
+                    try {
+                        repository.uploadFileToStorage(it, pdfPath!!)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error uploading PDF: ${e.message}", e)
+                        ""
+                    }
+                } ?: ""
+
+                val imageUrl = imageUri?.let { 
+                    try {
+                        repository.uploadFileToStorage(it, imagePath!!)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error uploading image: ${e.message}", e)
+                        ""
+                    }
+                } ?: ""
+
+                // Add the lesson with the uploaded file URLs
+                addLessonToSection(
+                    courseId = courseId,
+                    sectionId = sectionId,
+                    lessonTitle = lessonTitle,
+                    lessonDescription = lessonDescription,
+                    lessonVideoUrl = videoUrl,
+                    lessonDuration = lessonDuration,
+                    lessonPdfUrl = pdfUrl,
+                    lessonImageUrl = imageUrl
+                )
+
+                Log.d(TAG, "Lesson added successfully with files")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error uploading files", e)
+            }
+        }
+    }
+
+    private fun getFileExtension(uri: Uri): String {
+        val contentResolver = context.contentResolver
+        val mimeType = contentResolver.getType(uri)
+        return when (mimeType) {
+            "image/jpeg" -> ".jpg"
+            "image/png" -> ".png"
+            "application/pdf" -> ".pdf"
+            "video/mp4" -> ".mp4"
+            else -> ""
         }
     }
 } 

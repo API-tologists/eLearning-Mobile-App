@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import com.google.firebase.storage.FirebaseStorage
+import android.util.Log
 
 class CourseRepository {
     private val db = FirebaseFirestore.getInstance()
@@ -221,8 +222,39 @@ class CourseRepository {
     }
 
     suspend fun uploadFileToStorage(uri: android.net.Uri, path: String): String {
-        val storageRef = FirebaseStorage.getInstance().reference.child(path)
-        storageRef.putFile(uri).await()
-        return storageRef.downloadUrl.await().toString()
+        try {
+            // Initialize Firebase Storage with the correct bucket
+            val storage = FirebaseStorage.getInstance()
+            val storageRef = storage.reference
+            
+            // Create the file reference
+            val fileRef = storageRef.child(path)
+            
+            // Determine content type based on file extension
+            val contentType = when {
+                path.endsWith(".jpg") || path.endsWith(".jpeg") -> "image/jpeg"
+                path.endsWith(".png") -> "image/png"
+                path.endsWith(".pdf") -> "application/pdf"
+                path.endsWith(".mp4") -> "video/mp4"
+                else -> "application/octet-stream"
+            }
+            
+            // Create metadata with the correct content type
+            val metadata = com.google.firebase.storage.StorageMetadata.Builder()
+                .setContentType(contentType)
+                .build()
+            
+            // Upload the file with metadata
+            val uploadTask = fileRef.putFile(uri, metadata)
+            
+            // Wait for the upload to complete
+            uploadTask.await()
+            
+            // Get the download URL
+            return fileRef.downloadUrl.await().toString()
+        } catch (e: Exception) {
+            Log.e("CourseRepository", "Error uploading file: ${e.message}", e)
+            throw e
+        }
     }
 } 
