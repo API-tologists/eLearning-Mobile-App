@@ -24,6 +24,9 @@ import java.util.UUID
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.channels.awaitClose
 
 class CourseViewModel(application: Application) : AndroidViewModel(application) {
     private val TAG = "CourseViewModel"
@@ -160,26 +163,10 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                     // Update the enrollment document
                     enrollmentDoc.reference.set(updatedEnrollment).await()
                     
-                    // Update the course's lesson completion status
-                    val updatedSections = course.sections.map { section ->
-                        section.copy(
-                            lessons = section.lessons.map { lesson ->
-                                if (lesson.id == lessonId) {
-                                    lesson.copy(completed = true)
-                                } else lesson
-                            }
-                        )
-                    }
-                    val updatedCourse = course.copy(sections = updatedSections)
-                    
-                    // Update the course document
-                    courseRef.set(updatedCourse).await()
-                    
                     // Update the local state
-                    _selectedCourse.value = updatedCourse
+                    _selectedCourse.value = course
                     
                     Log.d(TAG, "Progress updated successfully: ${updatedCompletedLessons.size}/$totalLessons lessons completed (${progress}%)")
-                    Log.d(TAG, "Course document updated with lesson completion status")
                 } else {
                     Log.e(TAG, "Invalid course or total lessons count")
                 }
@@ -320,6 +307,19 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
     
+    fun updateCourseRating(courseId: String, rating: Float) {
+        viewModelScope.launch {
+            try {
+                repository.updateCourseRating(courseId, rating)
+                // Reload the course to update the UI
+                loadCourseById(courseId)
+                Log.d(TAG, "Course rating updated to $rating")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating course rating", e)
+            }
+        }
+    }
+    
     fun addLessonWithFiles(
         courseId: String,
         sectionId: String,
@@ -410,5 +410,29 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
             "video/mp4" -> ".mp4"
             else -> ""
         }
+    }
+
+    fun getLessonCompletionStatus(userId: String, courseId: String, lessonId: String): Flow<Boolean> = callbackFlow {
+        try {
+            val enrollmentQuery = enrollmentsCollection
+                .whereEqualTo("studentId", userId)
+                .whereEqualTo("courseId", courseId)
+                .get()
+                .await()
+
+            if (enrollmentQuery.isEmpty) {
+                trySend(false)
+                return@callbackFlow
+            }
+
+            val enrollment = enrollmentQuery.documents[0].toObject(CourseEnrollment::class.java)
+            trySend(enrollment?.completedLessons?.contains(lessonId) ?: false)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting lesson completion status", e)
+            trySend(false)
+        }
+        
+        // Add awaitClose to properly clean up the flow
+        awaitClose()
     }
 } 

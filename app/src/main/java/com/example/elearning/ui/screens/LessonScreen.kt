@@ -22,10 +22,14 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.elearning.model.AuthState
 import com.example.elearning.model.Lesson
+import com.example.elearning.model.User
 import com.example.elearning.navigation.Screen
 import com.example.elearning.viewmodel.CourseViewModel
 import com.example.elearning.viewmodel.AuthViewModel
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,19 +47,23 @@ fun LessonScreen(
     val currentLesson = currentSection?.lessons?.getOrNull(lessonIndex)
     val hasNextLesson = currentSection?.lessons?.size?.let { it > lessonIndex + 1 } ?: false
     val hasNextSection = course?.sections?.indexOf(currentSection)?.let { it < (course?.sections?.size ?: 0) - 1 } ?: false
+    val authState by authViewModel.authState.collectAsState()
+    val user = (authState as? AuthState.Authenticated)?.user
+    var isCompleted by remember { mutableStateOf(false) }
 
-    var completed by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    // Check if lesson is completed
+    LaunchedEffect(currentLesson?.id, user?.id) {
+        if (currentLesson?.id != null && user?.id != null) {
+            courseViewModel.getLessonCompletionStatus(user.id, courseId, currentLesson.id).collect { completed ->
+                isCompleted = completed
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         courseViewModel.loadCourseById(courseId)
-    }
-
-    LaunchedEffect(course, currentLesson) {
-        currentLesson?.let { lesson ->
-            completed = lesson.completed
-            Log.d("LessonScreen", "Lesson completion status updated: "+lesson.completed)
-        }
     }
 
     Scaffold(
@@ -64,7 +72,7 @@ fun LessonScreen(
                 title = { Text(currentLesson?.title ?: "Lesson") },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -103,7 +111,7 @@ fun LessonScreen(
                             player = exoPlayer
                             layoutParams = ViewGroup.LayoutParams(
                                 ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.WRAP_CONTENT
+                                ViewGroup.LayoutParams.MATCH_PARENT
                             )
                         }
                     },
@@ -123,17 +131,9 @@ fun LessonScreen(
                     AndroidView(
                         factory = { context ->
                             WebView(context).apply {
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.WRAP_CONTENT
-                                )
                                 webViewClient = WebViewClient()
-                                settings.apply {
-                                    javaScriptEnabled = true
-                                    loadWithOverviewMode = true
-                                    useWideViewPort = true
-                                }
-                                loadUrl("https://docs.google.com/gview?embedded=true&url=${currentLesson?.pdfUrl}")
+                                settings.javaScriptEnabled = true
+                                loadUrl("https://docs.google.com/viewer?url=${currentLesson?.pdfUrl}&embedded=true")
                             }
                         },
                         modifier = Modifier
@@ -181,7 +181,7 @@ fun LessonScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Progress and completion
+            // Duration and completion status
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -191,29 +191,29 @@ fun LessonScreen(
                     text = "Duration: ${currentLesson?.duration ?: ""}",
                     style = MaterialTheme.typography.bodyMedium
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = if (completed) "Completed" else "Mark as Complete",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Checkbox(
-                        checked = completed,
-                        onCheckedChange = { 
-                            completed = it
-                            if (it) {
-                                currentLesson?.id?.let { lessonId ->
-                                    val authState = authViewModel.authState.value
-                                    if (authState is com.example.elearning.model.AuthState.Authenticated) {
-                                        courseViewModel.updateCourseProgress(
-                                            userId = authState.user.id,
-                                            courseId = courseId,
-                                            lessonId = lessonId
-                                        )
-                                    }
-                                }
+                
+                // Mark as completed button
+                Button(
+                    onClick = {
+                        currentLesson?.id?.let { lessonId ->
+                            user?.id?.let { userId ->
+                                courseViewModel.updateCourseProgress(
+                                    userId = userId,
+                                    courseId = courseId,
+                                    lessonId = lessonId
+                                )
+                                isCompleted = true
                             }
                         }
+                    },
+                    enabled = !isCompleted
+                ) {
+                    Icon(
+                        imageVector = if (isCompleted) Icons.Default.CheckCircle else Icons.Default.PlayArrow,
+                        contentDescription = if (isCompleted) "Completed" else "Mark as Completed"
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(if (isCompleted) "Completed" else "Mark as Completed")
                 }
             }
 
@@ -238,28 +238,13 @@ fun LessonScreen(
                     },
                     enabled = lessonIndex > 0
                 ) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = null)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Previous")
                 }
 
                 Button(
                     onClick = { 
-                        // Mark current lesson as completed and update progress
-                        if (!completed) {
-                            completed = true
-                            currentLesson?.id?.let { lessonId ->
-                                val authState = authViewModel.authState.value
-                                if (authState is com.example.elearning.model.AuthState.Authenticated) {
-                                    courseViewModel.updateCourseProgress(
-                                        userId = authState.user.id,
-                                        courseId = courseId,
-                                        lessonId = lessonId
-                                    )
-                                }
-                            }
-                        }
-
                         // Navigate to next lesson
                         if (hasNextLesson) {
                             // Navigate to next lesson in current section
@@ -289,7 +274,7 @@ fun LessonScreen(
                 ) {
                     Text("Next")
                     Spacer(modifier = Modifier.width(8.dp))
-                    Icon(Icons.Default.ArrowForward, contentDescription = null)
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
                 }
             }
         }

@@ -188,8 +188,7 @@ class CourseRepository {
             videoUrl = lessonVideoUrl,
             duration = lessonDuration,
             pdfUrl = lessonPdfUrl,
-            imageUrl = lessonImageUrl,
-            completed = false
+            imageUrl = lessonImageUrl
         )
         val courseRef = coursesCollection.document(courseId)
         db.runTransaction { transaction ->
@@ -219,6 +218,21 @@ class CourseRepository {
         // This should be implemented to fetch the course and count all lessons in all sections
         // For now, return 0
         return 0
+    }
+
+    suspend fun updateCourseRating(courseId: String, rating: Float) {
+        val courseRef = coursesCollection.document(courseId)
+        db.runTransaction { transaction ->
+            val snapshot = transaction.get(courseRef)
+            val course = snapshot.toObject(Course::class.java)
+            if (course != null) {
+                // Calculate new average rating
+                val currentRating = course.rating
+                val newRating = if (currentRating == 0f) rating else (currentRating + rating) / 2
+                val updatedCourse = course.copy(rating = newRating)
+                transaction.set(courseRef, updatedCourse)
+            }
+        }.await()
     }
 
     suspend fun uploadFileToStorage(uri: android.net.Uri, path: String): String {

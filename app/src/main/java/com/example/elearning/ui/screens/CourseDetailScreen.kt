@@ -27,6 +27,7 @@ import com.example.elearning.model.Lesson
 import com.example.elearning.navigation.Screen
 import com.example.elearning.viewmodel.AuthViewModel
 import com.example.elearning.viewmodel.CourseViewModel
+import com.example.elearning.ui.components.RatingDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,24 +37,35 @@ fun CourseDetailScreen(
     courseViewModel: CourseViewModel,
     courseId: String
 ) {
+    val course by courseViewModel.selectedCourse.collectAsState()
     val authState by authViewModel.authState.collectAsState()
     val user = (authState as? AuthState.Authenticated)?.user
-    val course by courseViewModel.selectedCourse.collectAsState()
-    val courseProgress by courseViewModel.courseProgress.collectAsState()
-    
-    var isEnrolled by remember { mutableStateOf(false) }
-    
+    val enrolledCourses by courseViewModel.enrolledCourses.collectAsState()
+    var showRatingDialog by remember { mutableStateOf(false) }
+    var courseProgress by remember { mutableStateOf(0) }
+
+    // Calculate if user is enrolled
+    val isEnrolled = remember(course, enrolledCourses) {
+        course?.id?.let { courseId ->
+            enrolledCourses.any { it.id == courseId }
+        } ?: false
+    }
+
+    // Load course details and progress
     LaunchedEffect(courseId) {
         courseViewModel.loadCourseById(courseId)
         user?.id?.let { userId ->
             courseViewModel.loadCourseProgress(userId, courseId)
+            courseViewModel.loadEnrolledCourses(userId)
         }
     }
-    
-    LaunchedEffect(course, user) {
-        if (course != null && user != null) {
-            courseViewModel.loadEnrolledCourses(user.id)
-            isEnrolled = courseViewModel.enrolledCourses.value.any { it.id == courseId }
+
+    // Collect course progress
+    LaunchedEffect(user?.id) {
+        if (user?.id != null) {
+            courseViewModel.courseProgress.collect { progress ->
+                courseProgress = progress
+            }
         }
     }
 
@@ -63,7 +75,7 @@ fun CourseDetailScreen(
                 title = { Text(course?.title ?: "Course Details") },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -74,40 +86,36 @@ fun CourseDetailScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            item {
-                // Course header
-                course?.let { currentCourse ->
+            course?.let { currentCourse ->
+                // Course image
+                item {
+                    AsyncImage(
+                        model = currentCourse.imageUrl,
+                        contentDescription = currentCourse.title,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                // Course info
+                item {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp)
                     ) {
-                        // Course image
-                        AsyncImage(
-                            model = currentCourse.imageUrl,
-                            contentDescription = currentCourse.title,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
-                            contentScale = ContentScale.Crop
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Course info
                         Text(
                             text = currentCourse.title,
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold
                         )
-
                         Spacer(modifier = Modifier.height(8.dp))
-
                         Text(
                             text = currentCourse.description,
                             style = MaterialTheme.typography.bodyLarge
                         )
-
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Course stats
@@ -123,7 +131,7 @@ fun CourseDetailScreen(
                             CourseStat(
                                 icon = Icons.Default.Star,
                                 label = "Rating",
-                                value = currentCourse.rating.toString()
+                                value = String.format("%.1f", currentCourse.rating)
                             )
                             CourseStat(
                                 icon = Icons.Outlined.PlayArrow,
@@ -134,26 +142,44 @@ fun CourseDetailScreen(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // Enroll button
+                        // Progress indicator for enrolled students
+                        if (isEnrolled) {
+                            LinearProgressIndicator(
+                                progress = { courseProgress / 100f },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Text(
+                                text = "Progress: $courseProgress%",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+
+                        // Enroll button or Rate button
                         if (!isEnrolled) {
                             Button(
                                 onClick = {
                                     user?.id?.let { userId ->
                                         courseViewModel.enrollInCourse(userId, currentCourse.id)
-                                        isEnrolled = true
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text("Enroll Now")
                             }
+                        } else if (courseProgress == 100) {
+                            Button(
+                                onClick = { showRatingDialog = true },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Rate this Course")
+                            }
                         }
                     }
                 }
-            }
 
-            // Course sections
-            course?.let { currentCourse ->
+                // Course sections
                 items(currentCourse.sections) { section ->
                     CourseSection(
                         section = section,
@@ -170,6 +196,18 @@ fun CourseDetailScreen(
                 }
             }
         }
+    }
+
+    // Show rating dialog when course is completed
+    if (showRatingDialog) {
+        RatingDialog(
+            onDismiss = { showRatingDialog = false },
+            onRatingSubmit = { rating ->
+                course?.id?.let { courseId ->
+                    courseViewModel.updateCourseRating(courseId, rating)
+                }
+            }
+        )
     }
 }
 
@@ -233,9 +271,9 @@ private fun LessonItem(lesson: Lesson) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = if (lesson.completed) Icons.Default.CheckCircle else Icons.Default.PlayArrow,
-            contentDescription = if (lesson.completed) "Completed" else "Not Completed",
-            tint = if (lesson.completed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            imageVector = Icons.Default.PlayArrow,
+            contentDescription = "Lesson",
+            tint = MaterialTheme.colorScheme.onSurface
         )
         
         Spacer(modifier = Modifier.width(16.dp))
@@ -297,8 +335,8 @@ private fun CourseSection(
                             supportingContent = { Text(text = lesson.duration) },
                             leadingContent = {
                                 Icon(
-                                    if (lesson.completed) Icons.Default.Check else Icons.Default.PlayArrow,
-                                    contentDescription = if (lesson.completed) "Completed" else "Not Completed"
+                                    Icons.Default.PlayArrow,
+                                    contentDescription = "Lesson"
                                 )
                             },
                             modifier = Modifier.clickable { onLessonClick(index) }

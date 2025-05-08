@@ -10,6 +10,5 @@ data class Lesson(
     val duration: String = "",
     val videoUrl: String = "",
     val pdfUrl: String = "",
-    val imageUrl: String = "",
-    var completed: Boolean = false
+    val imageUrl: String = ""
 ) 
