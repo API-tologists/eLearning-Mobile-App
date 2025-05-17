@@ -1,6 +1,7 @@
 package com.example.elearning.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -8,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,19 +40,21 @@ fun HomeScreen(
     val user = (authState as? AuthState.Authenticated)?.user
     var searchQuery by remember { mutableStateOf("") }
     var showSearchBar by remember { mutableStateOf(false) }
+    var showCategoryDialog by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf("") }
     
     val courses by courseViewModel.courses.collectAsState(emptyList())
     val enrolledCourses by courseViewModel.enrolledCourses.collectAsState(emptyList())
     
-    val filteredCourses = remember(searchQuery) {
-        if (searchQuery.isBlank()) {
-            courses
-        } else {
-            courses.filter { course ->
-                course.title.contains(searchQuery, ignoreCase = true) ||
+    // Get unique categories
+    val categories = remember(courses) { courses.map { it.category }.filter { it.isNotBlank() }.distinct() }
+
+    val filteredCourses = remember(searchQuery, selectedCategory, courses) {
+        courses.filter { course ->
+            (searchQuery.isBlank() || course.title.contains(searchQuery, ignoreCase = true) ||
                 course.instructor.contains(searchQuery, ignoreCase = true) ||
-                course.category.contains(searchQuery, ignoreCase = true)
-            }
+                course.category.contains(searchQuery, ignoreCase = true)) &&
+            (selectedCategory.isBlank() || course.category == selectedCategory)
         }
     }
 
@@ -123,6 +127,19 @@ fun HomeScreen(
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
+                            IconButton(
+                                onClick = { showCategoryDialog = true },
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = "Filter by Category",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = MaterialTheme.colorScheme.surface,
@@ -134,6 +151,53 @@ fun HomeScreen(
                     )
                 }
             ) { padding ->
+                // Category filter dialog
+                if (showCategoryDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showCategoryDialog = false },
+                        title = { Text("Select Category") },
+                        text = {
+                            Column {
+                                categories.forEach { category ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                selectedCategory = category
+                                                showCategoryDialog = false
+                                            }
+                                            .padding(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        RadioButton(
+                                            selected = selectedCategory == category,
+                                            onClick = {
+                                                selectedCategory = category
+                                                showCategoryDialog = false
+                                            }
+                                        )
+                                        Text(text = category, modifier = Modifier.padding(start = 8.dp))
+                                    }
+                                }
+                                if (selectedCategory.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Button(onClick = {
+                                        selectedCategory = ""
+                                        showCategoryDialog = false
+                                    }) {
+                                        Text("Clear Filter")
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {},
+                        dismissButton = {
+                            TextButton(onClick = { showCategoryDialog = false }) {
+                                Text("Cancel")
+                            }
+                        }
+                    )
+                }
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -179,7 +243,7 @@ fun HomeScreen(
                             )
                         }
 
-                        items(courses) { course ->
+                        items(filteredCourses) { course ->
                             CourseCard(
                                 course = course,
                                 onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }

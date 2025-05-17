@@ -216,7 +216,8 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
         instructor: String,
         imageUrl: String,
         sections: List<CourseSection>,
-        instructorId: String
+        instructorId: String,
+        category: String
     ) {
         viewModelScope.launch {
             try {
@@ -228,7 +229,8 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                     description = description,
                     instructor = instructorId,
                     imageUrl = imageUrl,
-                    sections = sections
+                    sections = sections,
+                    category = category
                 )
                 repository.createCourse(course)
             } catch (e: Exception) {

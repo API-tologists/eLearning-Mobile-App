@@ -147,14 +147,15 @@ fun InstructorDashboardScreen(
     if (showCreateCourseDialog) {
         CreateCourseDialog(
             onDismiss = { showCreateCourseDialog = false },
-            onCreateCourse = { title, description, instructor, imageUrl ->
+            onCreateCourse = { title, description, instructor, imageUrl, category ->
                 courseViewModel.createCourse(
                     title = title,
                     description = description,
                     instructor = instructor,
                     imageUrl = imageUrl,
                     sections = emptyList(),
-                    instructorId = user.id
+                    instructorId = user.id,
+                    category = category
                 )
                 showCreateCourseDialog = false
             }
@@ -166,12 +167,13 @@ fun InstructorDashboardScreen(
 @Composable
 private fun CreateCourseDialog(
     onDismiss: () -> Unit,
-    onCreateCourse: (String, String, String, String) -> Unit
+    onCreateCourse: (String, String, String, String, String) -> Unit
 ) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var instructor by remember { mutableStateOf("") }
     var imageUrl by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -205,14 +207,20 @@ private fun CreateCourseDialog(
                     label = { Text("Image URL") },
                     modifier = Modifier.fillMaxWidth()
                 )
+                OutlinedTextField(
+                    value = category,
+                    onValueChange = { category = it },
+                    label = { Text("Category") },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    onCreateCourse(title, description, instructor, imageUrl)
+                    onCreateCourse(title, description, instructor, imageUrl, category)
                 },
-                enabled = title.isNotBlank() && description.isNotBlank() && instructor.isNotBlank()
+                enabled = title.isNotBlank() && description.isNotBlank() && instructor.isNotBlank() && category.isNotBlank()
             ) { Text("Create") }
         },
         dismissButton = {

@@ -41,6 +41,7 @@ fun CourseEditorScreen(
     var showAddLessonDialog by remember { mutableStateOf<Pair<Boolean, Int>>(false to -1) }
     var showAddQuizDialog by remember { mutableStateOf<Pair<Boolean, Int>>(false to -1) }
     var isLoading by remember { mutableStateOf(true) }
+    var category by remember { mutableStateOf(course?.category ?: "") }
 
     // Load course details
     LaunchedEffect(courseId) {
@@ -96,6 +97,14 @@ fun CourseEditorScreen(
                         text = c.description,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = { category = it },
+                        label = { Text("Category") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 

@@ -31,6 +31,7 @@ fun MyCoursesScreen(
     val authState by authViewModel.authState.collectAsState()
     val user = (authState as? AuthState.Authenticated)?.user
     val enrolledCourses by courseViewModel.enrolledCourses.collectAsState(emptyList())
+    var category by remember { mutableStateOf("") }
 
     if (user != null) {
         NavigationDrawer(
