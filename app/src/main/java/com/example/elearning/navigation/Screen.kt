@@ -41,4 +41,22 @@ sealed class Screen(val route: String) {
         fun createRoute(courseId: String, sectionId: String, lessonId: String) =
             "lesson_details/$courseId/$sectionId/$lessonId"
     }
+    object QuizEditor : Screen("quiz_editor/{courseId}/{sectionId}/{quizId}") {
+        val arguments = listOf(
+            navArgument("courseId") { type = NavType.StringType },
+            navArgument("sectionId") { type = NavType.StringType },
+            navArgument("quizId") { type = NavType.StringType }
+        )
+        fun createRoute(courseId: String, sectionId: String, quizId: String) =
+            "quiz_editor/$courseId/$sectionId/$quizId"
+    }
+    object QuizTaking : Screen("quiz_taking/{courseId}/{sectionId}/{quizId}") {
+        val arguments = listOf(
+            navArgument("courseId") { type = NavType.StringType },
+            navArgument("sectionId") { type = NavType.StringType },
+            navArgument("quizId") { type = NavType.StringType }
+        )
+        fun createRoute(courseId: String, sectionId: String, quizId: String) =
+            "quiz_taking/$courseId/$sectionId/$quizId"
+    }
 } 

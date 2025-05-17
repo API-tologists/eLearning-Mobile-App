@@ -25,6 +25,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
 import com.example.elearning.navigation.Screen
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.MoreVert
+import com.example.elearning.model.Quiz
+import com.example.elearning.model.QuestionType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +39,7 @@ fun CourseEditorScreen(
     val course by courseViewModel.selectedCourse.collectAsState()
     var showAddSectionDialog by remember { mutableStateOf(false) }
     var showAddLessonDialog by remember { mutableStateOf<Pair<Boolean, Int>>(false to -1) }
+    var showAddQuizDialog by remember { mutableStateOf<Pair<Boolean, Int>>(false to -1) }
     var isLoading by remember { mutableStateOf(true) }
 
     // Load course details
@@ -127,65 +131,132 @@ fun CourseEditorScreen(
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(c.sections) { section ->
                             Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
                             ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            section.title,
-                                            fontWeight = FontWeight.Bold,
-                                            style = MaterialTheme.typography.titleMedium
-                                        )
-                                        Spacer(modifier = Modifier.weight(1f))
-                                        IconButton(onClick = {
-                                            val idx = c.sections.indexOf(section)
-                                            showAddLessonDialog = true to idx
-                                        }) {
-                                            Icon(Icons.Filled.Add, contentDescription = "Add Lesson")
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
+                                ) {
+                                    Text(
+                                        text = section.title,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    // Lessons section
+                                    Text(
+                                        "Lessons",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    
+                                    Button(
+                                        onClick = { showAddLessonDialog = true to c.sections.indexOf(section) },
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = "Add Lesson")
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Add Lesson")
+                                    }
+
+                                    // Display lessons
+                                    section.lessons.forEach { lesson ->
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
+                                                .padding(vertical = 4.dp)
+                                                .clickable {
+                                                    navController.navigate(
+                                                        Screen.LessonDetails.createRoute(
+                                                            courseId = courseId,
+                                                            sectionId = section.id,
+                                                            lessonId = lesson.id
+                                                        )
+                                                    )
+                                                }
+                                        ) {
+                                            Icon(
+                                                Icons.Filled.PlayArrow,
+                                                contentDescription = "Lesson",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Column {
+                                                Text(
+                                                    lesson.title,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                                if (lesson.duration.isNotBlank()) {
+                                                    Text(
+                                                        lesson.duration,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
-                                    if (section.lessons.isEmpty()) {
-                                        Text(
-                                            "No lessons yet.",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    } else {
-                                        section.lessons.forEach { lesson ->
+
+                                    Spacer(modifier = Modifier.height(16.dp))
+
+                                    // Quizzes section
+                                    Text(
+                                        "Quizzes",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    
+                                    Button(
+                                        onClick = { showAddQuizDialog = true to c.sections.indexOf(section) },
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = "Add Quiz")
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Add Quiz")
+                                    }
+
+                                    // Display quizzes
+                                    section.quizzes.forEach { quiz ->
+                                        Card(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 4.dp)
+                                        ) {
                                             Row(
-                                                verticalAlignment = Alignment.CenterVertically,
                                                 modifier = Modifier
-                                                    .padding(vertical = 4.dp)
-                                                    .clickable {
+                                                    .fillMaxWidth()
+                                                    .padding(16.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Column {
+                                                    Text(
+                                                        text = quiz.title,
+                                                        style = MaterialTheme.typography.titleMedium
+                                                    )
+                                                    Text(
+                                                        text = "${quiz.questions.size} questions",
+                                                        style = MaterialTheme.typography.bodyMedium
+                                                    )
+                                                }
+                                                IconButton(
+                                                    onClick = {
                                                         navController.navigate(
-                                                            Screen.LessonDetails.createRoute(
+                                                            Screen.QuizEditor.createRoute(
                                                                 courseId = courseId,
                                                                 sectionId = section.id,
-                                                                lessonId = lesson.id
+                                                                quizId = quiz.id
                                                             )
                                                         )
                                                     }
-                                            ) {
-                                                Icon(
-                                                    Icons.Filled.PlayArrow,
-                                                    contentDescription = "Lesson",
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                Column {
-                                                    Text(
-                                                        lesson.title,
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        fontWeight = FontWeight.Medium
-                                                    )
-                                                    if (lesson.duration.isNotBlank()) {
-                                                        Text(
-                                                            lesson.duration,
-                                                            style = MaterialTheme.typography.bodySmall,
-                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                        )
-                                                    }
+                                                ) {
+                                                    Icon(Icons.Default.MoreVert, contentDescription = "Edit Quiz")
                                                 }
                                             }
                                         }
@@ -307,6 +378,89 @@ fun CourseEditorScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showAddLessonDialog = false to -1 }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // Add Quiz Dialog
+    if (showAddQuizDialog.first && course != null && showAddQuizDialog.second >= 0) {
+        var quizTitle by remember { mutableStateOf("") }
+        var quizDescription by remember { mutableStateOf("") }
+        var passingScore by remember { mutableStateOf("70") }
+        var timeLimit by remember { mutableStateOf("0") }
+        var attemptsAllowed by remember { mutableStateOf("1") }
+
+        AlertDialog(
+            onDismissRequest = { showAddQuizDialog = false to -1 },
+            title = { Text("Add Quiz") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = quizTitle,
+                        onValueChange = { quizTitle = it },
+                        label = { Text("Quiz Title") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = quizDescription,
+                        onValueChange = { quizDescription = it },
+                        label = { Text("Description") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = passingScore,
+                        onValueChange = { passingScore = it },
+                        label = { Text("Passing Score (%)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = timeLimit,
+                        onValueChange = { timeLimit = it },
+                        label = { Text("Time Limit (minutes, 0 for no limit)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = attemptsAllowed,
+                        onValueChange = { attemptsAllowed = it },
+                        label = { Text("Attempts Allowed") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (quizTitle.isNotBlank()) {
+                            course?.let { currentCourse ->
+                                val sectionIndex = showAddQuizDialog.second
+                                if (sectionIndex >= 0 && sectionIndex < currentCourse.sections.size) {
+                                    val section = currentCourse.sections[sectionIndex]
+                                    courseViewModel.addQuizToSection(
+                                        courseId = currentCourse.id,
+                                        sectionId = section.id,
+                                        quizTitle = quizTitle,
+                                        quizDescription = quizDescription,
+                                        passingScore = passingScore.toIntOrNull() ?: 70,
+                                        timeLimit = timeLimit.toIntOrNull() ?: 0,
+                                        attemptsAllowed = attemptsAllowed.toIntOrNull() ?: 1
+                                    )
+                                }
+                            }
+                            showAddQuizDialog = false to -1
+                        }
+                    }
+                ) {
+                    Text("Add")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddQuizDialog = false to -1 }) {
+                    Text("Cancel")
+                }
             }
         )
     }

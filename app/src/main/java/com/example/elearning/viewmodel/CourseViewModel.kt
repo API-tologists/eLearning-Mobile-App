@@ -10,6 +10,10 @@ import com.example.elearning.model.CourseEnrollment
 import com.example.elearning.model.CourseSection
 import com.example.elearning.model.User
 import com.example.elearning.model.Lesson
+import com.example.elearning.model.Quiz
+import com.example.elearning.model.Question
+import com.example.elearning.model.QuestionType
+import com.example.elearning.model.QuizAttempt
 import com.example.elearning.repository.CourseRepository
 import com.example.elearning.repository.UserRepository
 import com.google.firebase.auth.FirebaseAuth
@@ -27,6 +31,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.flow
 
 class CourseViewModel(application: Application) : AndroidViewModel(application) {
     private val TAG = "CourseViewModel"
@@ -562,5 +567,214 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
     suspend fun uploadFileToFirebase(uri: Uri, mediaType: String): String {
         // ... your upload logic here ...
         return "https://your_download_url"
+    }
+
+    fun addQuizToSection(
+        courseId: String,
+        sectionId: String,
+        quizTitle: String,
+        quizDescription: String,
+        passingScore: Int,
+        timeLimit: Int,
+        attemptsAllowed: Int
+    ) {
+        viewModelScope.launch {
+            try {
+                val course = _selectedCourse.value ?: return@launch
+                val newQuiz = Quiz(
+                    id = UUID.randomUUID().toString(),
+                    title = quizTitle,
+                    description = quizDescription,
+                    passingScore = passingScore,
+                    timeLimit = timeLimit,
+                    attemptsAllowed = attemptsAllowed
+                )
+                
+                val updatedSections = course.sections.map { section ->
+                    if (section.id == sectionId) {
+                        section.copy(quizzes = section.quizzes + newQuiz)
+                    } else section
+                }
+                val updatedCourse = course.copy(sections = updatedSections)
+                
+                // Update the course in Firestore
+                coursesCollection.document(courseId).set(updatedCourse).await()
+                _selectedCourse.value = updatedCourse
+                
+                Log.d(TAG, "Quiz added successfully: $quizTitle")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error adding quiz", e)
+            }
+        }
+    }
+
+    fun addQuestionToQuiz(
+        courseId: String,
+        sectionId: String,
+        quizId: String,
+        questionText: String,
+        questionType: QuestionType,
+        options: List<String>,
+        correctAnswer: String,
+        points: Int
+    ) {
+        viewModelScope.launch {
+            try {
+                val course = _selectedCourse.value ?: return@launch
+                val newQuestion = Question(
+                    id = UUID.randomUUID().toString(),
+                    text = questionText,
+                    type = questionType,
+                    options = options,
+                    correctAnswer = correctAnswer,
+                    points = points
+                )
+                
+                val updatedSections = course.sections.map { section ->
+                    if (section.id == sectionId) {
+                        val updatedQuizzes = section.quizzes.map { quiz ->
+                            if (quiz.id == quizId) {
+                                quiz.copy(questions = quiz.questions + newQuestion)
+                            } else quiz
+                        }
+                        section.copy(quizzes = updatedQuizzes)
+                    } else section
+                }
+                val updatedCourse = course.copy(sections = updatedSections)
+                
+                // Update the course in Firestore
+                coursesCollection.document(courseId).set(updatedCourse).await()
+                _selectedCourse.value = updatedCourse
+                
+                Log.d(TAG, "Question added successfully to quiz")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error adding question to quiz", e)
+            }
+        }
+    }
+
+    fun deleteQuiz(courseId: String, sectionId: String, quizId: String) {
+        viewModelScope.launch {
+            try {
+                val course = _selectedCourse.value ?: return@launch
+                val updatedSections = course.sections.map { section ->
+                    if (section.id == sectionId) {
+                        section.copy(quizzes = section.quizzes.filter { it.id != quizId })
+                    } else section
+                }
+                val updatedCourse = course.copy(sections = updatedSections)
+                
+                // Update the course in Firestore
+                coursesCollection.document(courseId).set(updatedCourse).await()
+                _selectedCourse.value = updatedCourse
+                
+                Log.d(TAG, "Quiz deleted successfully")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error deleting quiz", e)
+            }
+        }
+    }
+
+    fun saveQuizAttempt(
+        courseId: String,
+        sectionId: String,
+        quizId: String,
+        score: Int,
+        hasPassed: Boolean
+    ) {
+        viewModelScope.launch {
+            try {
+                val currentUser = FirebaseAuth.getInstance().currentUser
+                if (currentUser == null) {
+                    Log.e(TAG, "User must be authenticated to save quiz attempt")
+                    return@launch
+                }
+
+                val attempt = QuizAttempt(
+                    id = UUID.randomUUID().toString(),
+                    studentId = currentUser.uid,
+                    courseId = courseId,
+                    sectionId = sectionId,
+                    quizId = quizId,
+                    score = score,
+                    hasPassed = hasPassed,
+                    timestamp = System.currentTimeMillis()
+                )
+
+                // Save the attempt
+                db.collection("quiz_attempts").document(attempt.id).set(attempt).await()
+
+                // If passed, mark the section as completed
+                if (hasPassed) {
+                    val enrollmentQuery = enrollmentsCollection
+                        .whereEqualTo("studentId", currentUser.uid)
+                        .whereEqualTo("courseId", courseId)
+                        .get()
+                        .await()
+
+                    if (!enrollmentQuery.isEmpty) {
+                        val enrollmentDoc = enrollmentQuery.documents[0]
+                        val enrollment = enrollmentDoc.toObject(CourseEnrollment::class.java)
+                        
+                        if (enrollment != null) {
+                            val updatedCompletedLessons = enrollment.completedLessons + sectionId
+                            val updatedEnrollment = enrollment.copy(
+                                completedLessons = updatedCompletedLessons,
+                                progress = calculateProgress(courseId, updatedCompletedLessons)
+                            )
+                            enrollmentDoc.reference.set(updatedEnrollment).await()
+                        }
+                    }
+                }
+
+                Log.d(TAG, "Quiz attempt saved successfully")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error saving quiz attempt", e)
+            }
+        }
+    }
+
+    fun canTakeQuiz(courseId: String, sectionId: String): Flow<Boolean> = flow {
+        var canTake = false
+        try {
+            val currentUser = FirebaseAuth.getInstance().currentUser
+            if (currentUser != null) {
+                // First check if user is enrolled
+                val enrollmentQuery = enrollmentsCollection
+                    .whereEqualTo("studentId", currentUser.uid)
+                    .whereEqualTo("courseId", courseId)
+                    .get()
+                    .await()
+
+                if (!enrollmentQuery.isEmpty) {
+                    // Get the enrollment
+                    val enrollment = enrollmentQuery.documents[0].toObject(CourseEnrollment::class.java)
+                    if (enrollment != null) {
+                        // Get the course and section
+                        val course = coursesCollection.document(courseId).get().await().toObject(Course::class.java)
+                        val section = course?.sections?.find { it.id == sectionId }
+                        
+                        if (section != null) {
+                            // Check if all lessons in the section are completed
+                            val completedLessons = enrollment.completedLessons
+                            canTake = section.lessons.all { lesson ->
+                                completedLessons.contains(lesson.id)
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking quiz eligibility", e)
+        }
+        emit(canTake)
+    }
+
+    private suspend fun calculateProgress(courseId: String, completedLessons: List<String>): Int {
+        val course = coursesCollection.document(courseId).get().await().toObject(Course::class.java)
+        val totalLessons = course?.sections?.sumOf { it.lessons.size } ?: 0
+        return if (totalLessons > 0) {
+            (completedLessons.size * 100) / totalLessons
+        } else 0
     }
 } 

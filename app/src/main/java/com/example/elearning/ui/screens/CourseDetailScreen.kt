@@ -191,7 +191,10 @@ fun CourseDetailScreen(
                                     lessonIndex = lessonIndex
                                 )
                             )
-                        }
+                        },
+                        courseViewModel = courseViewModel,
+                        courseId = courseId,
+                        navController = navController
                     )
                 }
             }
@@ -295,7 +298,10 @@ private fun LessonItem(lesson: Lesson) {
 @Composable
 private fun CourseSection(
     section: CourseSection,
-    onLessonClick: (Int) -> Unit
+    onLessonClick: (Int) -> Unit,
+    courseViewModel: CourseViewModel,
+    courseId: String,
+    navController: NavController
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -341,6 +347,49 @@ private fun CourseSection(
                             },
                             modifier = Modifier.clickable { onLessonClick(index) }
                         )
+                    }
+
+                    // Display quizzes
+                    section.quizzes.forEach { quiz ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    text = quiz.title,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    text = "${quiz.questions.size} questions",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                
+                                val canTakeQuiz by courseViewModel.canTakeQuiz(courseId, section.id)
+                                    .collectAsState(initial = false)
+                                
+                                Button(
+                                    onClick = {
+                                        navController.navigate(
+                                            Screen.QuizTaking.createRoute(
+                                                courseId = courseId,
+                                                sectionId = section.id,
+                                                quizId = quiz.id
+                                            )
+                                        )
+                                    },
+                                    enabled = canTakeQuiz,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(if (canTakeQuiz) "Take Quiz" else "Complete Lessons First")
+                                }
+                            }
+                        }
                     }
                 }
             }

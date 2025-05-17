@@ -21,7 +21,8 @@ data class Course(
 data class CourseSection(
     val id: String = "",
     val title: String = "",
-    val lessons: List<Lesson> = emptyList()
+    val lessons: List<Lesson> = emptyList(),
+    val quizzes: List<Quiz> = emptyList()
 )
 
 data class CourseEnrollment(

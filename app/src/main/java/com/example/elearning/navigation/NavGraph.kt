@@ -146,5 +146,35 @@ fun NavGraph(
                 courseViewModel = courseViewModel
             )
         }
+        composable(
+            route = Screen.QuizEditor.route,
+            arguments = Screen.QuizEditor.arguments
+        ) { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: return@composable
+            val sectionId = backStackEntry.arguments?.getString("sectionId") ?: return@composable
+            val quizId = backStackEntry.arguments?.getString("quizId") ?: return@composable
+            QuizEditorScreen(
+                navController = navController,
+                courseId = courseId,
+                sectionId = sectionId,
+                quizId = quizId,
+                courseViewModel = courseViewModel
+            )
+        }
+        composable(
+            route = Screen.QuizTaking.route,
+            arguments = Screen.QuizTaking.arguments
+        ) { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: return@composable
+            val sectionId = backStackEntry.arguments?.getString("sectionId") ?: return@composable
+            val quizId = backStackEntry.arguments?.getString("quizId") ?: return@composable
+            QuizTakingScreen(
+                navController = navController,
+                courseId = courseId,
+                sectionId = sectionId,
+                quizId = quizId,
+                courseViewModel = courseViewModel
+            )
+        }
     }
 }
