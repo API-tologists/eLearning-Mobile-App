@@ -180,6 +180,7 @@ fun QuizTakingScreen(
                                 }
                             }
                             
+                            courseViewModel.saveQuizAttempt(courseId, sectionId, quizId, score, hasPassed)
                             showResults = true
                         },
                         modifier = Modifier.fillMaxWidth(),

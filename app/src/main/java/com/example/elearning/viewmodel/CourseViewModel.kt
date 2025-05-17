@@ -692,12 +692,14 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
         hasPassed: Boolean
     ) {
         viewModelScope.launch {
+            Log.d(TAG, "saveQuizAttempt called for user: ${FirebaseAuth.getInstance().currentUser?.uid}")
             try {
                 val currentUser = FirebaseAuth.getInstance().currentUser
                 if (currentUser == null) {
                     Log.e(TAG, "User must be authenticated to save quiz attempt")
                     return@launch
                 }
+                Log.d(TAG, "User authenticated: ${currentUser.uid}")
 
                 val attempt = QuizAttempt(
                     id = UUID.randomUUID().toString(),
@@ -712,9 +714,27 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
 
                 // Save the attempt
                 db.collection("quiz_attempts").document(attempt.id).set(attempt).await()
+                Log.d(TAG, "Quiz attempt written to Firestore: ${attempt.id}")
 
-                // If passed, mark the section as completed
-                if (hasPassed) {
+                // Count failed attempts for this quiz
+                val failedAttemptsQuery = db.collection("quiz_attempts")
+                    .whereEqualTo("studentId", currentUser.uid)
+                    .whereEqualTo("courseId", courseId)
+                    .whereEqualTo("sectionId", sectionId)
+                    .whereEqualTo("quizId", quizId)
+                    .whereEqualTo("hasPassed", false)
+                    .get()
+                    .await()
+
+                val failedAttempts = failedAttemptsQuery.size()
+
+                // Get the quiz to check attemptsAllowed
+                val course = coursesCollection.document(courseId).get().await().toObject(Course::class.java)
+                val quiz = course?.sections?.find { it.id == sectionId }?.quizzes?.find { it.id == quizId }
+                val attemptsAllowed = quiz?.attemptsAllowed ?: 3
+
+                if (!hasPassed && failedAttempts >= attemptsAllowed) {
+                    // Reset section progress
                     val enrollmentQuery = enrollmentsCollection
                         .whereEqualTo("studentId", currentUser.uid)
                         .whereEqualTo("courseId", courseId)
@@ -724,7 +744,29 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                     if (!enrollmentQuery.isEmpty) {
                         val enrollmentDoc = enrollmentQuery.documents[0]
                         val enrollment = enrollmentDoc.toObject(CourseEnrollment::class.java)
-                        
+                        if (enrollment != null && course != null) {
+                            // Remove all completed lessons from this section
+                            val sectionLessonIds = course.sections.find { it.id == sectionId }?.lessons?.map { it.id } ?: emptyList()
+                            val updatedCompletedLessons = enrollment.completedLessons.filterNot { sectionLessonIds.contains(it) }
+                            val updatedEnrollment = enrollment.copy(
+                                completedLessons = updatedCompletedLessons,
+                                progress = calculateProgress(courseId, updatedCompletedLessons)
+                            )
+                            enrollmentDoc.reference.set(updatedEnrollment).await()
+                            Log.d(TAG, "Section progress reset due to exceeding allowed quiz attempts.")
+                        }
+                    }
+                } else if (hasPassed) {
+                    // If passed, mark the section as completed (optional: your existing logic)
+                    val enrollmentQuery = enrollmentsCollection
+                        .whereEqualTo("studentId", currentUser.uid)
+                        .whereEqualTo("courseId", courseId)
+                        .get()
+                        .await()
+
+                    if (!enrollmentQuery.isEmpty) {
+                        val enrollmentDoc = enrollmentQuery.documents[0]
+                        val enrollment = enrollmentDoc.toObject(CourseEnrollment::class.java)
                         if (enrollment != null) {
                             val updatedCompletedLessons = enrollment.completedLessons + sectionId
                             val updatedEnrollment = enrollment.copy(
