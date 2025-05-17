@@ -14,6 +14,7 @@ import com.example.elearning.model.Quiz
 import com.example.elearning.model.Question
 import com.example.elearning.model.QuestionType
 import com.example.elearning.model.QuizAttempt
+import com.example.elearning.model.Certificate
 import com.example.elearning.repository.CourseRepository
 import com.example.elearning.repository.UserRepository
 import com.google.firebase.auth.FirebaseAuth
@@ -35,6 +36,7 @@ import kotlinx.coroutines.flow.flow
 import com.example.elearning.service.GeminiService
 import android.content.Context
 import com.example.elearning.R
+import com.google.firebase.firestore.ListenerRegistration
 
 class CourseViewModel(application: Application) : AndroidViewModel(application) {
     private val TAG = "CourseViewModel"
@@ -43,6 +45,7 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
     private val db = FirebaseFirestore.getInstance()
     private val coursesCollection = db.collection("courses")
     private val enrollmentsCollection = db.collection("enrollments")
+    private val certificatesCollection = db.collection("certificates")
     private val context = application.applicationContext
     private val geminiService = GeminiService(context.getString(R.string.gemini_api_key)).apply {
         checkModelAvailability()
@@ -68,6 +71,9 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
     
     private val _externalResources = MutableStateFlow<List<String>>(emptyList())
     val externalResources: StateFlow<List<String>> = _externalResources.asStateFlow()
+    
+    private val _certificate = MutableStateFlow<Certificate?>(null)
+    val certificate: StateFlow<Certificate?> = _certificate.asStateFlow()
     
     init {
         viewModelScope.launch {
@@ -179,6 +185,11 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                     
                     // Update the local state
                     _selectedCourse.value = course
+                    
+                    // Generate certificate if progress reaches 100%
+                    if (progress == 100) {
+                        generateCertificate(courseId, userId)
+                    }
                     
                     Log.d(TAG, "Progress updated successfully: ${updatedCompletedLessons.size}/$totalLessons lessons completed (${progress}%)")
                 } else {
@@ -757,7 +768,7 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                         }
                     }
                 } else if (hasPassed) {
-                    // If passed, mark the section as completed (optional: your existing logic)
+                    // If passed, just update the quiz attempt without affecting progress
                     val enrollmentQuery = enrollmentsCollection
                         .whereEqualTo("studentId", currentUser.uid)
                         .whereEqualTo("courseId", courseId)
@@ -768,10 +779,10 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                         val enrollmentDoc = enrollmentQuery.documents[0]
                         val enrollment = enrollmentDoc.toObject(CourseEnrollment::class.java)
                         if (enrollment != null) {
-                            val updatedCompletedLessons = enrollment.completedLessons + sectionId
+                            // Don't add section ID to completed lessons, just update the enrollment
                             val updatedEnrollment = enrollment.copy(
-                                completedLessons = updatedCompletedLessons,
-                                progress = calculateProgress(courseId, updatedCompletedLessons)
+                                completedLessons = enrollment.completedLessons,
+                                progress = calculateProgress(courseId, enrollment.completedLessons)
                             )
                             enrollmentDoc.reference.set(updatedEnrollment).await()
                         }
@@ -842,6 +853,129 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
             } catch (e: Exception) {
                 Log.e(TAG, "Error getting external resources", e)
                 _externalResources.value = emptyList()
+            }
+        }
+    }
+
+    private fun generateCertificateNumber(): String {
+        val year = java.time.LocalDate.now().year
+        val random = (10000..99999).random()
+        return "CERT-$year-$random"
+    }
+    
+    private suspend fun generateCertificate(
+        courseId: String,
+        studentId: String
+    ) {
+        try {
+            // Get course details
+            val course = coursesCollection.document(courseId).get().await().toObject(Course::class.java)
+            if (course == null) {
+                Log.e(TAG, "Course not found for certificate generation")
+                return
+            }
+            
+            // Get student details
+            val student = userRepository.getUserById(studentId)
+            if (student == null) {
+                Log.e(TAG, "Student not found for certificate generation")
+                return
+            }
+            
+            // Get instructor details
+            val instructor = userRepository.getUserById(course.instructor)
+            if (instructor == null) {
+                Log.e(TAG, "Instructor not found for certificate generation")
+                return
+            }
+            
+            // Create certificate
+            val certificate = Certificate(
+                id = UUID.randomUUID().toString(),
+                courseId = courseId,
+                courseName = course.title,
+                studentId = studentId,
+                studentName = student.name,
+                instructorId = course.instructor,
+                instructorName = instructor.name,
+                issueDate = System.currentTimeMillis(),
+                certificateNumber = generateCertificateNumber()
+            )
+            
+            // Save certificate to Firestore
+            certificatesCollection.document(certificate.id).set(certificate).await()
+            _certificate.value = certificate
+            
+            Log.d(TAG, "Certificate generated successfully: ${certificate.certificateNumber}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error generating certificate", e)
+        }
+    }
+    
+    fun getCertificate(certificateId: String) {
+        viewModelScope.launch {
+            try {
+                val certificate = certificatesCollection.document(certificateId).get().await()
+                    .toObject(Certificate::class.java)
+                _certificate.value = certificate
+            } catch (e: Exception) {
+                Log.e(TAG, "Error getting certificate", e)
+            }
+        }
+    }
+    
+    fun getUserCertificates(userId: String): Flow<List<Certificate>> = callbackFlow {
+        if (userId.isEmpty()) {
+            trySend(emptyList())
+            return@callbackFlow
+        }
+
+        var listener: ListenerRegistration? = null
+        try {
+            listener = certificatesCollection
+                .whereEqualTo("studentId", userId)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        close(error)
+                        return@addSnapshotListener
+                    }
+                    val certificates = snapshot?.toObjects(Certificate::class.java) ?: emptyList()
+                    trySend(certificates)
+                }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting user certificates", e)
+            trySend(emptyList())
+        }
+
+        awaitClose {
+            listener?.remove()
+        }
+    }
+
+    fun getCurrentUserId(): String {
+        return FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    }
+
+    fun ensureCertificatesForCompletedCourses() {
+        val userId = getCurrentUserId()
+        if (userId.isEmpty()) return
+
+        viewModelScope.launch {
+            // Get all enrollments for the user
+            val enrollments = enrollmentsCollection.whereEqualTo("studentId", userId).get().await()
+            for (enrollmentDoc in enrollments.documents) {
+                val enrollment = enrollmentDoc.toObject(CourseEnrollment::class.java) ?: continue
+                if (enrollment.progress == 100) {
+                    // Check if certificate already exists
+                    val certQuery = certificatesCollection
+                        .whereEqualTo("studentId", userId)
+                        .whereEqualTo("courseId", enrollment.courseId)
+                        .get().await()
+                    if (certQuery.isEmpty) {
+                        // Generate certificate if missing
+                        generateCertificate(enrollment.courseId, userId)
+                    }
+                }
             }
         }
     }

@@ -83,7 +83,10 @@ fun NavGraph(
             DiscussionsScreen(navController = navController)
         }
         composable(Screen.Progress.route) {
-            ProgressScreen(navController = navController)
+            ProgressScreen(
+                navController = navController,
+                courseViewModel = courseViewModel
+            )
         }
         composable(Screen.Settings.route) {
             SettingsScreen(navController = navController)
@@ -174,6 +177,18 @@ fun NavGraph(
                 sectionId = sectionId,
                 quizId = quizId,
                 courseViewModel = courseViewModel
+            )
+        }
+        composable(
+            route = Screen.Certificate.route,
+            arguments = listOf(
+                navArgument("certificateId") { type = NavType.StringType }
+            )
+        ) {
+            CertificateScreen(
+                navController = navController,
+                courseViewModel = courseViewModel,
+                certificateId = it.arguments?.getString("certificateId") ?: ""
             )
         }
     }
