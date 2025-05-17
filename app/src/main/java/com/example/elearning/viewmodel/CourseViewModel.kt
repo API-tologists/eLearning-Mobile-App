@@ -32,6 +32,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.flow
+import com.example.elearning.service.GeminiService
+import android.content.Context
+import com.example.elearning.R
 
 class CourseViewModel(application: Application) : AndroidViewModel(application) {
     private val TAG = "CourseViewModel"
@@ -41,6 +44,9 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
     private val coursesCollection = db.collection("courses")
     private val enrollmentsCollection = db.collection("enrollments")
     private val context = application.applicationContext
+    private val geminiService = GeminiService(context.getString(R.string.gemini_api_key)).apply {
+        checkModelAvailability()
+    }
     
     private val _courses = MutableStateFlow<List<Course>>(emptyList())
     val courses: StateFlow<List<Course>> = _courses
@@ -59,6 +65,9 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
     
     private val _enrolledStudents = MutableStateFlow<List<User>>(emptyList())
     val enrolledStudents: StateFlow<List<User>> = _enrolledStudents.asStateFlow()
+    
+    private val _externalResources = MutableStateFlow<List<String>>(emptyList())
+    val externalResources: StateFlow<List<String>> = _externalResources.asStateFlow()
     
     init {
         viewModelScope.launch {
@@ -776,5 +785,22 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
         return if (totalLessons > 0) {
             (completedLessons.size * 100) / totalLessons
         } else 0
+    }
+
+    fun getExternalResources(quizTitle: String, quizDescription: String, failedQuestions: List<Question>) {
+        viewModelScope.launch {
+            try {
+                val questionTexts = failedQuestions.map { it.text }
+                val resources = geminiService.generateLearningResources(
+                    quizTitle = quizTitle,
+                    quizDescription = quizDescription,
+                    failedQuestions = questionTexts
+                )
+                _externalResources.value = resources
+            } catch (e: Exception) {
+                Log.e(TAG, "Error getting external resources", e)
+                _externalResources.value = emptyList()
+            }
+        }
     }
 } 

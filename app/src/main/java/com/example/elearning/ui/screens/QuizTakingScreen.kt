@@ -1,5 +1,8 @@
 package com.example.elearning.ui.screens
 
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,6 +13,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -35,7 +40,10 @@ fun QuizTakingScreen(
     var showResults by remember { mutableStateOf(false) }
     var score by remember { mutableStateOf(0) }
     var hasPassed by remember { mutableStateOf(false) }
+    var failedQuestions by remember { mutableStateOf(listOf<Question>()) }
+    val externalResources by courseViewModel.externalResources.collectAsState()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     // Timer for quiz
     LaunchedEffect(timeRemaining) {
@@ -65,21 +73,32 @@ fun QuizTakingScreen(
                     .padding(padding)
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
                     text = if (hasPassed) "Congratulations! You passed!" else "Try again!",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                
                 Text(
                     text = "Your score: $score%",
                     style = MaterialTheme.typography.titleLarge
                 )
-                Spacer(modifier = Modifier.height(32.dp))
+
+                // Only show recommended resources if the user failed
+                if (!hasPassed && externalResources.isNotEmpty()) {
+                    Text(
+                        text = "Recommended Resources:",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.align(Alignment.Start)
+                    )
+                    RecommendedResourcesSection(resources = externalResources)
+                }
+
                 Button(
-                    onClick = { navController.navigateUp() }
+                    onClick = { navController.navigateUp() },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Back to Course")
                 }
@@ -144,18 +163,24 @@ fun QuizTakingScreen(
                             } ?: 0
                             score = if (totalPoints > 0) (earnedPoints * 100) / totalPoints else 0
                             hasPassed = score >= (currentQuiz?.passingScore ?: 70)
-                            showResults = true
-
-                            // Save quiz attempt
-                            scope.launch {
-                                courseViewModel.saveQuizAttempt(
-                                    courseId = courseId,
-                                    sectionId = sectionId,
-                                    quizId = quizId,
-                                    score = score,
-                                    hasPassed = hasPassed
-                                )
+                            
+                            // Get failed questions
+                            failedQuestions = currentQuiz?.questions?.filter { question ->
+                                answers[question.id] != question.correctAnswer
+                            } ?: emptyList()
+                            
+                            // Get external resources if failed
+                            if (!hasPassed) {
+                                currentQuiz?.let { quiz ->
+                                    courseViewModel.getExternalResources(
+                                        quizTitle = quiz.title,
+                                        quizDescription = quiz.description,
+                                        failedQuestions = failedQuestions
+                                    )
+                                }
                             }
+                            
+                            showResults = true
                         },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = answers.size == currentQuiz?.questions?.size
@@ -165,6 +190,43 @@ fun QuizTakingScreen(
                         Text("Submit Quiz")
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun RecommendedResourcesSection(resources: List<String>) {
+    val context = LocalContext.current
+    // Fixed regex: removed [ and ] from inside the character class
+    val urlRegex = "(https?://[\\w\\-._~:/?@!$&'()*+,;=%]+)".toRegex()
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        resources.forEach { resource ->
+            val urls = urlRegex.findAll(resource).map { it.value }.toList()
+            if (urls.isNotEmpty()) {
+                // Show the text before the first URL, if any
+                val firstUrlIndex = resource.indexOf(urls.first())
+                if (firstUrlIndex > 0) {
+                    Text(text = resource.substring(0, firstUrlIndex))
+                }
+                urls.forEach { url ->
+                    Text(
+                        text = url,
+                        color = Color.Blue,
+                        modifier = Modifier.clickable {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            context.startActivity(intent)
+                        }
+                    )
+                }
+                // Show the text after the last URL, if any
+                val lastUrl = urls.last()
+                val lastUrlEnd = resource.indexOf(lastUrl) + lastUrl.length
+                if (lastUrlEnd < resource.length) {
+                    Text(text = resource.substring(lastUrlEnd))
+                }
+            } else {
+                Text(text = resource)
             }
         }
     }
