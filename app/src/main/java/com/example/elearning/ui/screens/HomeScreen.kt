@@ -198,87 +198,91 @@ fun HomeScreen(
                         }
                     )
                 }
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    if (searchQuery.isNotBlank()) {
-                        item {
-                            Text(
-                                text = "Search Results",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        items(filteredCourses) { course ->
-                            CourseCard(
-                                course = course,
-                                onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
-                            )
-                        }
-                    } else {
-                        item {
-                            Text(
-                                text = "Welcome, ${user.name}!",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Continue your learning journey",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
 
-                        item {
-                            Text(
-                                text = "Available Courses",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        items(filteredCourses) { course ->
-                            CourseCard(
-                                course = course,
-                                onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
-                            )
-                        }
-
-                        item {
-                            Text(
-                                text = "Quick Actions",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        item {
-                            QuickActionsGrid(navController)
-                        }
-
-                        if (enrolledCourses.isNotEmpty()) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .padding(bottom = 72.dp)
+                    ) {
+                        if (searchQuery.isNotBlank()) {
                             item {
                                 Text(
-                                    text = "Continue Learning",
+                                    text = "Search Results",
                                     style = MaterialTheme.typography.headlineMedium,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
-
-                            items(enrolledCourses) { course ->
+                            items(filteredCourses) { course ->
                                 CourseCard(
                                     course = course,
                                     onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
                                 )
                             }
+                        } else {
+                            item {
+                                Text(
+                                    text = "Welcome, ${user.name}!",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Continue your learning journey",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            item {
+                                Text(
+                                    text = "Available Courses",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            items(filteredCourses) { course ->
+                                CourseCard(
+                                    course = course,
+                                    onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
+                                )
+                            }
+
+                            item {
+                                Text(
+                                    text = "Quick Actions",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            item {
+                                QuickActionsGrid(navController)
+                            }
+
+                            if (enrolledCourses.isNotEmpty()) {
+                                item {
+                                    Text(
+                                        text = "Continue Learning",
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                items(enrolledCourses) { course ->
+                                    CourseCard(
+                                        course = course,
+                                        onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
+                                    )
+                                }
+                            }
                         }
                     }
+                    
+                    BottomNavigationBar(navController)
                 }
             }
         }
@@ -334,5 +338,40 @@ private fun QuickActionButton(
             .height(80.dp)
     ) {
         Text(text)
+    }
+}
+
+@Composable
+private fun BottomNavigationBar(navController: NavController) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+        NavigationBar(
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp
+        ) {
+            NavigationBarItem(
+                selected = true,
+                onClick = { navController.navigate(Screen.Home.route) },
+                icon = {
+                    Icon(imageVector = Icons.Default.Home, contentDescription = "Discover")
+                },
+                label = { Text("Discover") }
+            )
+            NavigationBarItem(
+                selected = false,
+                onClick = { navController.navigate(Screen.MyCourses.route) },
+                icon = {
+                    Icon(imageVector = Icons.Default.ShoppingCart, contentDescription = "My courses")
+                },
+                label = { Text("My courses") }
+            )
+            NavigationBarItem(
+                selected = false,
+                onClick = { navController.navigate(Screen.Profile.route) },
+                icon = {
+                    Icon(imageVector = Icons.Default.Person, contentDescription = "Profile")
+                },
+                label = { Text("Profile") }
+            )
+        }
     }
 } 

@@ -62,4 +62,7 @@ sealed class Screen(val route: String) {
     object Certificate : Screen("certificate/{certificateId}") {
         fun createRoute(certificateId: String) = "certificate/$certificateId"
     }
+    object AddCreditCard : Screen("add_credit_card")
+    object CreditCards : Screen("credit_cards")
+    object Profile : Screen("profile")
 } 

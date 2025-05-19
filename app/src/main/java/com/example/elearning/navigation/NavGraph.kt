@@ -13,12 +13,14 @@ import com.example.elearning.model.UserRole
 import com.example.elearning.ui.screens.*
 import com.example.elearning.viewmodel.AuthViewModel
 import com.example.elearning.viewmodel.CourseViewModel
+import com.example.elearning.viewmodel.CreditCardViewModel
 
 @Composable
 fun NavGraph(
     navController: NavHostController,
     authViewModel: AuthViewModel,
-    courseViewModel: CourseViewModel
+    courseViewModel: CourseViewModel,
+    creditCardViewModel: CreditCardViewModel
 ) {
     val authState by authViewModel.authState.collectAsState()
     val user = (authState as? AuthState.Authenticated)?.user
@@ -189,6 +191,26 @@ fun NavGraph(
                 navController = navController,
                 courseViewModel = courseViewModel,
                 certificateId = it.arguments?.getString("certificateId") ?: ""
+            )
+        }
+        composable(Screen.AddCreditCard.route) {
+            AddCreditCardScreen(
+                navController = navController,
+                creditCardViewModel = creditCardViewModel,
+                authViewModel = authViewModel
+            )
+        }
+        composable(Screen.CreditCards.route) {
+            CreditCardsScreen(
+                navController = navController,
+                creditCardViewModel = creditCardViewModel,
+                authViewModel = authViewModel
+            )
+        }
+        composable(Screen.Profile.route) {
+            ProfileScreen(
+                navController = navController,
+                authViewModel = authViewModel
             )
         }
     }
