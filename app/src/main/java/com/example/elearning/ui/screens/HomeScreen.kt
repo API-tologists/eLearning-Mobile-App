@@ -58,6 +58,17 @@ fun HomeScreen(
         }
     }
 
+    val userId = user?.id ?: ""
+    var coursesWithExtras by remember { mutableStateOf<List<CourseViewModel.CourseWithExtras>>(emptyList()) }
+
+    LaunchedEffect(userId, courses) {
+        if (userId.isNotBlank()) {
+            courseViewModel.getCoursesWithExtras(userId) { list ->
+                coursesWithExtras = list
+            }
+        }
+    }
+
     // Load enrolled courses when user is authenticated
     LaunchedEffect(user?.id) {
         user?.id?.let { userId ->
@@ -214,10 +225,12 @@ fun HomeScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                             }
-                            items(filteredCourses) { course ->
+                            items(coursesWithExtras) { courseWithExtras ->
                                 CourseCard(
-                                    course = course,
-                                    onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
+                                    course = courseWithExtras.course,
+                                    progress = courseWithExtras.progress,
+                                    instructorName = courseWithExtras.instructorName,
+                                    onClick = { navController.navigate(Screen.CourseDetail.createRoute(courseWithExtras.course.id)) }
                                 )
                             }
                         } else {
@@ -228,27 +241,28 @@ fun HomeScreen(
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(12.dp))
                                 Text(
                                     text = "Continue your learning journey",
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                            }
-
-                            item {
+                                Spacer(modifier = Modifier.height(12.dp))
                                 Text(
                                     text = "Available Courses",
                                     style = MaterialTheme.typography.headlineMedium,
                                     fontWeight = FontWeight.Bold
                                 )
+                                Spacer(modifier = Modifier.height(12.dp))
                             }
-
-                            items(filteredCourses) { course ->
+                            items(coursesWithExtras) { courseWithExtras ->
                                 CourseCard(
-                                    course = course,
-                                    onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
+                                    course = courseWithExtras.course,
+                                    progress = courseWithExtras.progress,
+                                    instructorName = courseWithExtras.instructorName,
+                                    onClick = { navController.navigate(Screen.CourseDetail.createRoute(courseWithExtras.course.id)) }
                                 )
+                                Spacer(modifier = Modifier.height(12.dp))
                             }
 
                             item {

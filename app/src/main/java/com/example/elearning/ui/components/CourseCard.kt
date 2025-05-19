@@ -25,6 +25,7 @@ import com.example.elearning.model.Course
 fun CourseCard(
     course: Course,
     progress: Int = 0,
+    instructorName: String = "",
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -101,7 +102,7 @@ fun CourseCard(
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = "By ${course.instructor}",
+                        text = "By $instructorName",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray
                     )

@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
@@ -75,140 +76,170 @@ fun LessonDetailsScreen(
             )
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(16.dp),
+            contentAlignment = Alignment.TopCenter
         ) {
             currentLesson?.let { lesson ->
-                // Lesson Title
-                Text(
-                    text = lesson.title,
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                // Lesson Duration
-                Row(
-                    modifier = Modifier.padding(bottom = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    elevation = CardDefaults.cardElevation(6.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = lesson.duration,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-
-                // Lesson Description
-                Text(
-                    text = "Description",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Text(
-                    text = lesson.description,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                // IMAGE
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Image", style = MaterialTheme.typography.titleMedium)
-                    if (lesson.imageUrl.isNotEmpty()) {
-                        IconButton(onClick = { imagePicker.launch("image/*") }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Update Image")
-                        }
-                        IconButton(onClick = { courseViewModel.deleteLessonMedia(courseId, sectionId, lessonId, "image") }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete Image")
-                        }
-                    } else {
-                        IconButton(onClick = { imagePicker.launch("image/*") }) {
-                            Icon(Icons.Default.Add, contentDescription = "Add Image")
-                        }
-                    }
-                }
-                if (lesson.imageUrl.isNotEmpty()) {
-                    AsyncImage(
-                        model = lesson.imageUrl,
-                        contentDescription = "Lesson image",
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .aspectRatio(16f / 9f),
-                        contentScale = ContentScale.Fit
-                    )
-                }
-
-                // VIDEO
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Video", style = MaterialTheme.typography.titleMedium)
-                    if (lesson.videoUrl.isNotEmpty()) {
-                        IconButton(onClick = { videoPicker.launch("video/*") }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Update Video")
+                            .padding(20.dp)
+                    ) {
+                        // Lesson Title
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.MoreVert, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = lesson.title,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
-                        IconButton(onClick = { courseViewModel.deleteLessonMedia(courseId, sectionId, lessonId, "video") }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete Video")
+                        Spacer(Modifier.height(8.dp))
+                        Divider()
+                        Spacer(Modifier.height(8.dp))
+                        // Lesson Duration
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.MoreVert, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = if (lesson.duration.isNotBlank()) "Duration: ${lesson.duration}" else "No duration specified",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
                         }
-                    } else {
-                        IconButton(onClick = { videoPicker.launch("video/*") }) {
-                            Icon(Icons.Default.Add, contentDescription = "Add Video")
+                        Spacer(Modifier.height(16.dp))
+                        // Description
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Description", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         }
-                    }
-                }
-                if (lesson.videoUrl.isNotEmpty()) {
-                    val context = LocalContext.current
-                    val exoPlayer = remember {
-                        ExoPlayer.Builder(context).build().apply {
-                            setMediaItem(MediaItem.fromUri(lesson.videoUrl))
-                            prepare()
-                        }
-                    }
-                    DisposableEffect(Unit) { onDispose { exoPlayer.release() } }
-                    AndroidView(
-                        factory = { ctx ->
-                            PlayerView(ctx).apply { player = exoPlayer }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(16f / 9f)
-                    )
-                }
-
-                // PDF
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("PDF", style = MaterialTheme.typography.titleMedium)
-                    if (lesson.pdfUrl.isNotEmpty()) {
-                        IconButton(onClick = { pdfPicker.launch("application/pdf") }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Update PDF")
-                        }
-                        IconButton(onClick = { courseViewModel.deleteLessonMedia(courseId, sectionId, lessonId, "pdf") }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete PDF")
-                        }
-                    } else {
-                        IconButton(onClick = { pdfPicker.launch("application/pdf") }) {
-                            Icon(Icons.Default.Add, contentDescription = "Add PDF")
-                        }
-                    }
-                }
-                if (lesson.pdfUrl.isNotEmpty()) {
-                    AndroidView(
-                        factory = { context ->
-                            WebView(context).apply {
-                                webViewClient = WebViewClient()
-                                settings.javaScriptEnabled = true
-                                loadUrl("https://docs.google.com/viewer?url=${lesson.pdfUrl}&embedded=true")
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = if (lesson.description.isNotBlank()) lesson.description else "No description provided.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        Divider()
+                        Spacer(Modifier.height(12.dp))
+                        // IMAGE
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.AccountCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Image", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.weight(1f))
+                            if (lesson.imageUrl.isNotEmpty()) {
+                                IconButton(onClick = { imagePicker.launch("image/*") }) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Update Image")
+                                }
+                                IconButton(onClick = { courseViewModel.deleteLessonMedia(courseId, sectionId, lessonId, "image") }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete Image")
+                                }
+                            } else {
+                                IconButton(onClick = { imagePicker.launch("image/*") }) {
+                                    Icon(Icons.Default.Add, contentDescription = "Add Image")
+                                }
                             }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(400.dp)
-                    )
+                        }
+                        if (lesson.imageUrl.isNotEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            AsyncImage(
+                                model = lesson.imageUrl,
+                                contentDescription = "Lesson image",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(16f / 9f)
+                                    .padding(bottom = 8.dp),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                        Divider()
+                        Spacer(Modifier.height(12.dp))
+                        // VIDEO
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Video", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.weight(1f))
+                            if (lesson.videoUrl.isNotEmpty()) {
+                                IconButton(onClick = { videoPicker.launch("video/*") }) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Update Video")
+                                }
+                                IconButton(onClick = { courseViewModel.deleteLessonMedia(courseId, sectionId, lessonId, "video") }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete Video")
+                                }
+                            } else {
+                                IconButton(onClick = { videoPicker.launch("video/*") }) {
+                                    Icon(Icons.Default.Add, contentDescription = "Add Video")
+                                }
+                            }
+                        }
+                        if (lesson.videoUrl.isNotEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            val context = LocalContext.current
+                            val exoPlayer = remember {
+                                ExoPlayer.Builder(context).build().apply {
+                                    setMediaItem(MediaItem.fromUri(lesson.videoUrl))
+                                    prepare()
+                                }
+                            }
+                            DisposableEffect(Unit) { onDispose { exoPlayer.release() } }
+                            AndroidView(
+                                factory = { ctx ->
+                                    PlayerView(ctx).apply { player = exoPlayer }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(16f / 9f)
+                                    .padding(bottom = 8.dp)
+                            )
+                        }
+                        Divider()
+                        Spacer(Modifier.height(12.dp))
+                        // PDF
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(8.dp))
+                            Text("PDF", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.weight(1f))
+                            if (lesson.pdfUrl.isNotEmpty()) {
+                                IconButton(onClick = { pdfPicker.launch("application/pdf") }) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Update PDF")
+                                }
+                                IconButton(onClick = { courseViewModel.deleteLessonMedia(courseId, sectionId, lessonId, "pdf") }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete PDF")
+                                }
+                            } else {
+                                IconButton(onClick = { pdfPicker.launch("application/pdf") }) {
+                                    Icon(Icons.Default.Add, contentDescription = "Add PDF")
+                                }
+                            }
+                        }
+                        if (lesson.pdfUrl.isNotEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            AndroidView(
+                                factory = { ctx ->
+                                    WebView(ctx).apply {
+                                        webViewClient = WebViewClient()
+                                        loadUrl(lesson.pdfUrl)
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(220.dp)
+                                    .padding(bottom = 8.dp)
+                            )
+                        }
+                    }
                 }
             }
         }

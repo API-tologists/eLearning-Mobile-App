@@ -28,6 +28,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.MoreVert
 import com.example.elearning.model.Quiz
 import com.example.elearning.model.QuestionType
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,6 +68,7 @@ fun CourseEditorScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(padding)
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -88,26 +92,38 @@ fun CourseEditorScreen(
                 }
             } else {
                 course?.let { c ->
-                    Text(
-                        text = c.title,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = c.description,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    OutlinedTextField(
-                        value = category,
-                        onValueChange = { category = it },
-                        label = { Text("Category") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    // Course Info Card
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text("Course Info", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = c.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = c.description,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = category,
+                                onValueChange = { category = it },
+                                label = { Text("Category") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(24.dp))
 
+                    // Sections Header
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
@@ -127,7 +143,6 @@ fun CourseEditorScreen(
                             Text("Add Section")
                         }
                     }
-
                     Spacer(modifier = Modifier.height(8.dp))
 
                     if (c.sections.isEmpty()) {
@@ -137,136 +152,184 @@ fun CourseEditorScreen(
                         )
                     }
 
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(c.sections) { section ->
-                            Card(
+                    // Sections List
+                    c.sections.forEach { section ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        ) {
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 8.dp)
+                                    .padding(16.dp)
                             ) {
-                                Column(
+                                Text(
+                                    text = section.title,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                // Lessons section
+                                Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(16.dp)
+                                        .padding(vertical = 8.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                                 ) {
-                                    Text(
-                                        text = section.title,
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold
-                                    )
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    // Lessons section
-                                    Text(
-                                        "Lessons",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    
-                                    Button(
-                                        onClick = { showAddLessonDialog = true to c.sections.indexOf(section) },
-                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp)
                                     ) {
-                                        Icon(Icons.Default.Add, contentDescription = "Add Lesson")
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Add Lesson")
-                                    }
-
-                                    // Display lessons
-                                    section.lessons.forEach { lesson ->
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier
-                                                .padding(vertical = 4.dp)
-                                                .clickable {
-                                                    navController.navigate(
-                                                        Screen.LessonDetails.createRoute(
-                                                            courseId = courseId,
-                                                            sectionId = section.id,
-                                                            lessonId = lesson.id
-                                                        )
-                                                    )
-                                                }
+                                            modifier = Modifier.fillMaxWidth()
                                         ) {
-                                            Icon(
-                                                Icons.Filled.PlayArrow,
-                                                contentDescription = "Lesson",
-                                                tint = MaterialTheme.colorScheme.primary
+                                            Text(
+                                                "Lessons",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold
                                             )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Column {
-                                                Text(
-                                                    lesson.title,
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    fontWeight = FontWeight.Medium
-                                                )
-                                                if (lesson.duration.isNotBlank()) {
-                                                    Text(
-                                                        lesson.duration,
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
+                                            Spacer(modifier = Modifier.weight(1f))
+                                            Button(
+                                                onClick = { showAddLessonDialog = true to c.sections.indexOf(section) },
+                                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                                            ) {
+                                                Icon(Icons.Default.Add, contentDescription = "Add Lesson")
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("Add Lesson")
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        if (section.lessons.isEmpty()) {
+                                            Text(
+                                                "No lessons added yet",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(vertical = 8.dp)
+                                            )
+                                        } else {
+                                            section.lessons.forEach { lesson ->
+                                                Card(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(vertical = 4.dp)
+                                                        .clickable {
+                                                            navController.navigate(
+                                                                Screen.LessonDetails.createRoute(
+                                                                    courseId = courseId,
+                                                                    sectionId = section.id,
+                                                                    lessonId = lesson.id
+                                                                )
+                                                            )
+                                                        },
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(12.dp),
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Icon(
+                                                            Icons.Filled.PlayArrow,
+                                                            contentDescription = "Lesson",
+                                                            tint = MaterialTheme.colorScheme.primary,
+                                                            modifier = Modifier.size(24.dp)
+                                                        )
+                                                        Spacer(modifier = Modifier.width(12.dp))
+                                                        Column(modifier = Modifier.weight(1f)) {
+                                                            Text(
+                                                                lesson.title,
+                                                                style = MaterialTheme.typography.titleSmall,
+                                                                fontWeight = FontWeight.Medium
+                                                            )
+                                                            if (lesson.description.isNotBlank()) {
+                                                                Text(
+                                                                    lesson.description,
+                                                                    style = MaterialTheme.typography.bodySmall,
+                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                    maxLines = 2
+                                                                )
+                                                            }
+                                                            if (lesson.duration.isNotBlank()) {
+                                                                Text(
+                                                                    "Duration: ${lesson.duration}",
+                                                                    style = MaterialTheme.typography.bodySmall,
+                                                                    color = MaterialTheme.colorScheme.primary
+                                                                )
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
                                     }
-
-                                    Spacer(modifier = Modifier.height(16.dp))
-
-                                    // Quizzes section
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                // Quizzes section
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
                                     Text(
                                         "Quizzes",
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold
                                     )
-                                    
+                                    Spacer(modifier = Modifier.weight(1f))
                                     Button(
                                         onClick = { showAddQuizDialog = true to c.sections.indexOf(section) },
-                                        modifier = Modifier.padding(vertical = 8.dp)
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
                                     ) {
                                         Icon(Icons.Default.Add, contentDescription = "Add Quiz")
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text("Add Quiz")
                                     }
-
-                                    // Display quizzes
-                                    section.quizzes.forEach { quiz ->
-                                        Card(
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                section.quizzes.forEach { quiz ->
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                    ) {
+                                        Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(vertical = 4.dp)
+                                                .padding(16.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(16.dp),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Column {
-                                                    Text(
-                                                        text = quiz.title,
-                                                        style = MaterialTheme.typography.titleMedium
-                                                    )
-                                                    Text(
-                                                        text = "${quiz.questions.size} questions",
-                                                        style = MaterialTheme.typography.bodyMedium
-                                                    )
-                                                }
-                                                IconButton(
-                                                    onClick = {
-                                                        navController.navigate(
-                                                            Screen.QuizEditor.createRoute(
-                                                                courseId = courseId,
-                                                                sectionId = section.id,
-                                                                quizId = quiz.id
-                                                            )
+                                            Column {
+                                                Text(
+                                                    text = quiz.title,
+                                                    style = MaterialTheme.typography.titleMedium
+                                                )
+                                                Text(
+                                                    text = "${quiz.questions.size} questions",
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                            }
+                                            IconButton(
+                                                onClick = {
+                                                    navController.navigate(
+                                                        Screen.QuizEditor.createRoute(
+                                                            courseId = courseId,
+                                                            sectionId = section.id,
+                                                            quizId = quiz.id
                                                         )
-                                                    }
-                                                ) {
-                                                    Icon(Icons.Default.MoreVert, contentDescription = "Edit Quiz")
+                                                    )
                                                 }
+                                            ) {
+                                                Icon(Icons.Default.MoreVert, contentDescription = "Edit Quiz")
                                             }
                                         }
                                     }

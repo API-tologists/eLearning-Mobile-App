@@ -981,4 +981,33 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
+
+    data class CourseWithExtras(
+        val course: Course,
+        val progress: Int,
+        val instructorName: String
+    )
+
+    fun getCoursesWithExtras(userId: String, onResult: (List<CourseWithExtras>) -> Unit) {
+        viewModelScope.launch {
+            val courses = _courses.value
+            val result = mutableListOf<CourseWithExtras>()
+            for (course in courses) {
+                // Get progress
+                val enrollmentSnap = enrollmentsCollection
+                    .whereEqualTo("studentId", userId)
+                    .whereEqualTo("courseId", course.id)
+                    .get().await()
+                val progress = enrollmentSnap.documents.firstOrNull()
+                    ?.toObject(CourseEnrollment::class.java)?.progress ?: 0
+
+                // Get instructor name
+                val instructorSnap = db.collection("users").document(course.instructor).get().await()
+                val instructorName = instructorSnap.getString("name") ?: course.instructor
+
+                result.add(CourseWithExtras(course, progress, instructorName))
+            }
+            onResult(result)
+        }
+    }
 } 
