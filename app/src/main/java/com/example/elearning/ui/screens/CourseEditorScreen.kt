@@ -31,6 +31,7 @@ import com.example.elearning.model.QuestionType
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Close
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,6 +99,8 @@ fun CourseEditorScreen(
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                     ) {
+                        var editableDescription by remember { mutableStateOf(c.description) }
+                        var editableCategory by remember { mutableStateOf(category) }
                         Column(Modifier.padding(16.dp)) {
                             Text("Course Info", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(8.dp))
@@ -107,18 +110,28 @@ fun CourseEditorScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(Modifier.height(4.dp))
-                            Text(
-                                text = c.description,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            OutlinedTextField(
+                                value = editableDescription,
+                                onValueChange = { editableDescription = it },
+                                label = { Text("Description") },
+                                modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(Modifier.height(8.dp))
                             OutlinedTextField(
-                                value = category,
-                                onValueChange = { category = it },
+                                value = editableCategory,
+                                onValueChange = { editableCategory = it },
                                 label = { Text("Category") },
                                 modifier = Modifier.fillMaxWidth()
                             )
+                            Spacer(Modifier.height(12.dp))
+                            Button(
+                                onClick = {
+                                    courseViewModel.updateCourseInfo(courseId = c.id, description = editableDescription, category = editableCategory)
+                                },
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Text("Save")
+                            }
                         }
                     }
                     Spacer(Modifier.height(24.dp))
@@ -338,6 +351,37 @@ fun CourseEditorScreen(
                         }
                     }
                 }
+            }
+            // Add Delete Course Button and Dialog
+            var showDeleteDialog by remember { mutableStateOf(false) }
+            if (course != null) {
+                Spacer(Modifier.height(32.dp))
+                Button(
+                    onClick = { showDeleteDialog = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = "Delete Course")
+                    Spacer(Modifier.width(8.dp))
+                    Text("Delete Course")
+                }
+            }
+            if (showDeleteDialog && course != null) {
+                AlertDialog(
+                    onDismissRequest = { showDeleteDialog = false },
+                    title = { Text("Delete Course") },
+                    text = { Text("Are you sure you want to delete this course? This action cannot be undone.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            courseViewModel.deleteCourse(course!!.id)
+                            showDeleteDialog = false
+                            navController.popBackStack() // Go back after deletion
+                        }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+                    }
+                )
             }
         }
     }

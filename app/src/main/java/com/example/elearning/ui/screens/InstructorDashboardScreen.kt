@@ -1,5 +1,8 @@
 package com.example.elearning.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -147,12 +150,12 @@ fun InstructorDashboardScreen(
     if (showCreateCourseDialog) {
         CreateCourseDialog(
             onDismiss = { showCreateCourseDialog = false },
-            onCreateCourse = { title, description, instructor, imageUrl, category ->
+            onCreateCourse = { title, description, imageUri, category ->
                 courseViewModel.createCourse(
                     title = title,
                     description = description,
-                    instructor = instructor,
-                    imageUrl = imageUrl,
+                    instructor = user.name,
+                    imageUrl = imageUri?.toString() ?: "",
                     sections = emptyList(),
                     instructorId = user.id,
                     category = category
@@ -167,13 +170,16 @@ fun InstructorDashboardScreen(
 @Composable
 private fun CreateCourseDialog(
     onDismiss: () -> Unit,
-    onCreateCourse: (String, String, String, String, String) -> Unit
+    onCreateCourse: (String, String, Uri?, String) -> Unit
 ) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var instructor by remember { mutableStateOf("") }
-    var imageUrl by remember { mutableStateOf("") }
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
     var category by remember { mutableStateOf("") }
+
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        imageUri = uri
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -195,18 +201,9 @@ private fun CreateCourseDialog(
                     label = { Text("Description") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                OutlinedTextField(
-                    value = instructor,
-                    onValueChange = { instructor = it },
-                    label = { Text("Instructor Name") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = imageUrl,
-                    onValueChange = { imageUrl = it },
-                    label = { Text("Image URL") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Button(onClick = { imagePicker.launch("image/*") }) {
+                    Text(if (imageUri != null) "Image Selected" else "Select Image")
+                }
                 OutlinedTextField(
                     value = category,
                     onValueChange = { category = it },
@@ -218,9 +215,9 @@ private fun CreateCourseDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    onCreateCourse(title, description, instructor, imageUrl, category)
+                    onCreateCourse(title, description, imageUri, category)
                 },
-                enabled = title.isNotBlank() && description.isNotBlank() && instructor.isNotBlank() && category.isNotBlank()
+                enabled = title.isNotBlank() && description.isNotBlank() && imageUri != null && category.isNotBlank()
             ) { Text("Create") }
         },
         dismissButton = {

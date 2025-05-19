@@ -1010,4 +1010,32 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
             onResult(result)
         }
     }
+
+    fun updateCourseInfo(courseId: String, description: String, category: String) {
+        viewModelScope.launch {
+            try {
+                val course = _selectedCourse.value ?: return@launch
+                val updatedCourse = course.copy(description = description, category = category)
+                coursesCollection.document(courseId).set(updatedCourse).await()
+                _selectedCourse.value = updatedCourse
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating course info", e)
+            }
+        }
+    }
+
+    fun deleteCourse(courseId: String) {
+        viewModelScope.launch {
+            try {
+                coursesCollection.document(courseId).delete().await()
+                // Remove from local state
+                _selectedCourse.value = null
+                _instructorCourses.value = _instructorCourses.value.filter { it.id != courseId }
+                _courses.value = _courses.value.filter { it.id != courseId }
+                Log.d(TAG, "Course deleted successfully: $courseId")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error deleting course", e)
+            }
+        }
+    }
 } 
