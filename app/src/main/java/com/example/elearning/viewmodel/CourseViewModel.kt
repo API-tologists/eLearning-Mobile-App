@@ -1038,4 +1038,46 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
+
+    fun updateQuizDescription(courseId: String, sectionId: String, quizId: String, description: String) {
+        viewModelScope.launch {
+            try {
+                val course = _selectedCourse.value ?: return@launch
+                val updatedSections = course.sections.map { section ->
+                    if (section.id == sectionId) {
+                        val updatedQuizzes = section.quizzes.map { quiz ->
+                            if (quiz.id == quizId) quiz.copy(description = description) else quiz
+                        }
+                        section.copy(quizzes = updatedQuizzes)
+                    } else section
+                }
+                val updatedCourse = course.copy(sections = updatedSections)
+                coursesCollection.document(courseId).set(updatedCourse).await()
+                _selectedCourse.value = updatedCourse
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating quiz description", e)
+            }
+        }
+    }
+
+    fun deleteQuestionFromQuiz(courseId: String, sectionId: String, quizId: String, questionId: String) {
+        viewModelScope.launch {
+            try {
+                val course = _selectedCourse.value ?: return@launch
+                val updatedSections = course.sections.map { section ->
+                    if (section.id == sectionId) {
+                        val updatedQuizzes = section.quizzes.map { quiz ->
+                            if (quiz.id == quizId) quiz.copy(questions = quiz.questions.filter { it.id != questionId }) else quiz
+                        }
+                        section.copy(quizzes = updatedQuizzes)
+                    } else section
+                }
+                val updatedCourse = course.copy(sections = updatedSections)
+                coursesCollection.document(courseId).set(updatedCourse).await()
+                _selectedCourse.value = updatedCourse
+            } catch (e: Exception) {
+                Log.e(TAG, "Error deleting question from quiz", e)
+            }
+        }
+    }
 } 
