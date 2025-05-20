@@ -355,6 +355,7 @@ private fun SettingsItem(
     subtitle: String? = null,
     onClick: (() -> Unit)? = null
 ) {
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -395,7 +396,7 @@ private fun SettingsItem(
             if (onClick != null) {
                 Spacer(modifier = Modifier.weight(1f))
                 Icon(
-                    imageVector = Icons.Default.ChevronRight,
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "Navigate",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
