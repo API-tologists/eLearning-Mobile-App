@@ -14,13 +14,17 @@ import com.example.elearning.ui.screens.*
 import com.example.elearning.viewmodel.AuthViewModel
 import com.example.elearning.viewmodel.CourseViewModel
 import com.example.elearning.viewmodel.CreditCardViewModel
+import com.example.elearning.viewmodel.NoteViewModel
+import androidx.compose.ui.Modifier
+import androidx.compose.runtime.remember
 
 @Composable
 fun NavGraph(
     navController: NavHostController,
     authViewModel: AuthViewModel,
     courseViewModel: CourseViewModel,
-    creditCardViewModel: CreditCardViewModel
+    creditCardViewModel: CreditCardViewModel,
+    noteViewModel: NoteViewModel
 ) {
     val authState by authViewModel.authState.collectAsState()
     val user = (authState as? AuthState.Authenticated)?.user
@@ -122,7 +126,9 @@ fun NavGraph(
                 sectionId = sectionId,
                 lessonIndex = lessonIndex,
                 courseViewModel = courseViewModel,
-                authViewModel = authViewModel
+                authViewModel = authViewModel,
+                noteViewModel = noteViewModel,
+                modifier = Modifier
             )
         }
         composable(
