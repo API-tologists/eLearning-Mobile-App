@@ -9,7 +9,8 @@ data class User(
     val role: UserRole = UserRole.STUDENT,
     val profileImage: String = "",
     val enrolledCourses: List<String> = emptyList(),
-    val completedLessons: List<String> = emptyList()
+    val completedLessons: List<String> = emptyList(),
+    val xp: Int = 0
 )
 
 enum class UserRole {
