@@ -128,18 +128,7 @@ fun LessonScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    AndroidView(
-                        factory = { context ->
-                            WebView(context).apply {
-                                webViewClient = WebViewClient()
-                                settings.javaScriptEnabled = true
-                                loadUrl("https://docs.google.com/viewer?url=${currentLesson?.pdfUrl}&embedded=true")
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(400.dp)
-                    )
+                    PdfPreview(currentLesson!!.pdfUrl)
                 }
             }
 

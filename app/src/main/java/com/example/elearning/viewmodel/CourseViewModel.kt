@@ -601,8 +601,14 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
 
     // You must implement this function to upload to Firebase Storage and return the download URL
     suspend fun uploadFileToFirebase(uri: Uri, mediaType: String): String {
-        // ... your upload logic here ...
-        return "https://your_download_url"
+        val extension = when (mediaType) {
+            "image" -> ".jpg"
+            "video" -> ".mp4"
+            "pdf" -> ".pdf"
+            else -> ""
+        }
+        val path = "lessons/${mediaType}s/${UUID.randomUUID()}$extension"
+        return repository.uploadFileToStorage(uri, path)
     }
 
     fun addQuizToSection(
