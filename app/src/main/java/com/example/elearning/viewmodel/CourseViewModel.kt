@@ -157,43 +157,57 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                     return@launch
                 }
                 
-                Log.d(TAG, "Current enrollment state: completedLessons=${enrollment.completedLessons}, progress=${enrollment.progress}")
-                
-                // Get the course to calculate total lessons
+                // Get the course to calculate total lessons and check section completion
                 val courseRef = coursesCollection.document(courseId)
                 val course = courseRef.get().await().toObject(Course::class.java)
-                val totalLessons = course?.sections?.sumOf { it.lessons.size } ?: 0
                 
-                if (totalLessons > 0 && course != null) {
-                    // Add the new lesson to completed lessons if not already completed
-                    val updatedCompletedLessons = if (!enrollment.completedLessons.contains(lessonId)) {
-                        enrollment.completedLessons + lessonId
-                    } else {
-                        enrollment.completedLessons
+                if (course != null) {
+                    // Find which section this lesson belongs to
+                    val section = course.sections.find { section ->
+                        section.lessons.any { it.id == lessonId }
                     }
                     
-                    // Calculate progress based on completed lessons vs total lessons
-                    val progress = (updatedCompletedLessons.size * 100) / totalLessons
-                    
-                    val updatedEnrollment = enrollment.copy(
-                        completedLessons = updatedCompletedLessons,
-                        progress = progress
-                    )
-                    
-                    // Update the enrollment document
-                    enrollmentDoc.reference.set(updatedEnrollment).await()
-                    
-                    // Update the local state
-                    _selectedCourse.value = course
-                    
-                    // Generate certificate if progress reaches 100%
-                    if (progress == 100) {
-                        generateCertificate(courseId, userId)
+                    if (section != null) {
+                        // Add the new lesson to completed lessons if not already completed
+                        val updatedCompletedLessons = if (!enrollment.completedLessons.contains(lessonId)) {
+                            enrollment.completedLessons + lessonId
+                        } else {
+                            enrollment.completedLessons
+                        }
+                        
+                        // Check if all lessons in this section are now completed
+                        val sectionLessons = section.lessons.map { it.id }
+                        val isSectionCompleted = sectionLessons.all { it in updatedCompletedLessons }
+                        
+                        // Calculate progress based on completed lessons vs total lessons
+                        val totalLessons = course.sections.sumOf { it.lessons.size }
+                        val progress = (updatedCompletedLessons.size * 100) / totalLessons
+                        
+                        val updatedEnrollment = enrollment.copy(
+                            completedLessons = updatedCompletedLessons,
+                            progress = progress
+                        )
+                        
+                        // Update the enrollment document
+                        enrollmentDoc.reference.set(updatedEnrollment).await()
+                        
+                        // If section is completed, add XP
+                        if (isSectionCompleted) {
+                            updateUserXP(userId, 2) // Add 2 XP for completing a section
+                        }
+                        
+                        // Update the local state
+                        _selectedCourse.value = course
+                        
+                        // Generate certificate if progress reaches 100%
+                        if (progress == 100) {
+                            generateCertificate(courseId, userId)
+                        }
+                        
+                        Log.d(TAG, "Progress updated successfully: ${updatedCompletedLessons.size}/$totalLessons lessons completed (${progress}%)")
                     }
-                    
-                    Log.d(TAG, "Progress updated successfully: ${updatedCompletedLessons.size}/$totalLessons lessons completed (${progress}%)")
                 } else {
-                    Log.e(TAG, "Invalid course or total lessons count")
+                    Log.e(TAG, "Invalid course")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating course progress", e)
@@ -1035,6 +1049,92 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                 Log.d(TAG, "Course deleted successfully: $courseId")
             } catch (e: Exception) {
                 Log.e(TAG, "Error deleting course", e)
+            }
+        }
+    }
+
+    fun updateQuizDescription(courseId: String, sectionId: String, quizId: String, description: String) {
+        viewModelScope.launch {
+            try {
+                val course = _selectedCourse.value ?: return@launch
+                val updatedSections = course.sections.map { section ->
+                    if (section.id == sectionId) {
+                        val updatedQuizzes = section.quizzes.map { quiz ->
+                            if (quiz.id == quizId) quiz.copy(description = description) else quiz
+                        }
+                        section.copy(quizzes = updatedQuizzes)
+                    } else section
+                }
+                val updatedCourse = course.copy(sections = updatedSections)
+                coursesCollection.document(courseId).set(updatedCourse).await()
+                _selectedCourse.value = updatedCourse
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating quiz description", e)
+            }
+        }
+    }
+
+    fun deleteQuestionFromQuiz(courseId: String, sectionId: String, quizId: String, questionId: String) {
+        viewModelScope.launch {
+            try {
+                val course = _selectedCourse.value ?: return@launch
+                val updatedSections = course.sections.map { section ->
+                    if (section.id == sectionId) {
+                        val updatedQuizzes = section.quizzes.map { quiz ->
+                            if (quiz.id == quizId) quiz.copy(questions = quiz.questions.filter { it.id != questionId }) else quiz
+                        }
+                        section.copy(quizzes = updatedQuizzes)
+                    } else section
+                }
+                val updatedCourse = course.copy(sections = updatedSections)
+                coursesCollection.document(courseId).set(updatedCourse).await()
+                _selectedCourse.value = updatedCourse
+            } catch (e: Exception) {
+                Log.e(TAG, "Error deleting question from quiz", e)
+            }
+        }
+    }
+
+    private suspend fun updateUserXP(userId: String, xpToAdd: Int) {
+        try {
+            val userRef = db.collection("users").document(userId)
+            db.runTransaction { transaction ->
+                val snapshot = transaction.get(userRef)
+                val user = snapshot.toObject(User::class.java)
+                if (user != null) {
+                    val updatedUser = user.copy(xp = user.xp + xpToAdd)
+                    transaction.set(userRef, updatedUser)
+                }
+            }.await()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating user XP", e)
+        }
+    }
+
+    fun completeSection(courseId: String, sectionId: String) {
+        viewModelScope.launch {
+            try {
+                val userId = getCurrentUserId()
+                if (userId.isEmpty()) return@launch
+
+                // Update enrollment progress
+                val enrollmentRef = enrollmentsCollection.document("${userId}_${courseId}")
+                db.runTransaction { transaction ->
+                    val snapshot = transaction.get(enrollmentRef)
+                    val enrollment = snapshot.toObject(CourseEnrollment::class.java)
+                    if (enrollment != null) {
+                        val updatedEnrollment = enrollment.copy(
+                            progress = enrollment.progress + 1
+                        )
+                        transaction.set(enrollmentRef, updatedEnrollment)
+                    }
+                }.await()
+
+                // Add XP for completing the section
+                updateUserXP(userId, 2) // Add 2 XP for completing a section
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error completing section", e)
             }
         }
     }

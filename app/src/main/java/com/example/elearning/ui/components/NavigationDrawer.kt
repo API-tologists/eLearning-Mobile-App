@@ -119,63 +119,8 @@ fun NavigationDrawer(
                 )
 
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Outlined.Home, contentDescription = "Bookmarks") },
-                    label = { Text("Bookmarks") },
-                    selected = false,
-                    onClick = {
-                        navController.navigate(Screen.Bookmarks.route)
-                        onDrawerStateChange(false)
-                    },
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Outlined.Home, contentDescription = "Assignments") },
-                    label = { Text("Assignments") },
-                    selected = false,
-                    onClick = {
-                        navController.navigate(Screen.Assignments.route)
-                        onDrawerStateChange(false)
-                    },
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Outlined.Home, contentDescription = "Quizzes") },
-                    label = { Text("Quizzes") },
-                    selected = false,
-                    onClick = {
-                        navController.navigate(Screen.Quizzes.route)
-                        onDrawerStateChange(false)
-                    },
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Outlined.Home, contentDescription = "Schedule") },
-                    label = { Text("Schedule") },
-                    selected = false,
-                    onClick = {
-                        navController.navigate(Screen.Schedule.route)
-                        onDrawerStateChange(false)
-                    },
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Outlined.Home, contentDescription = "Discussions") },
-                    label = { Text("Discussions") },
-                    selected = false,
-                    onClick = {
-                        navController.navigate(Screen.Discussions.route)
-                        onDrawerStateChange(false)
-                    },
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Outlined.Home, contentDescription = "Progress") },
-                    label = { Text("Progress") },
+                    icon = { Icon(Icons.Outlined.Home, contentDescription = "Certificate") },
+                    label = { Text("Certificate") },
                     selected = false,
                     onClick = {
                         navController.navigate(Screen.Progress.route)

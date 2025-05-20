@@ -28,6 +28,9 @@ fun QuizEditorScreen(
 ) {
     val course by courseViewModel.selectedCourse.collectAsState()
     var showAddQuestionDialog by remember { mutableStateOf(false) }
+    var editableDescription by remember { mutableStateOf("") }
+    var showDeleteQuizDialog by remember { mutableStateOf(false) }
+    var questionToDelete by remember { mutableStateOf<Question?>(null) }
     
     val currentQuiz = course?.sections?.find { it.id == sectionId }?.quizzes?.find { it.id == quizId }
 
@@ -50,12 +53,20 @@ fun QuizEditorScreen(
                 .padding(16.dp)
         ) {
             item {
-                Text(
-                    text = currentQuiz?.description ?: "",
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                OutlinedTextField(
+                    value = editableDescription,
+                    onValueChange = { editableDescription = it },
+                    label = { Text("Quiz Description") },
+                    modifier = Modifier.fillMaxWidth()
                 )
-
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        courseViewModel.updateQuizDescription(courseId, sectionId, quizId, editableDescription)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Save") }
+                Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = { showAddQuestionDialog = true },
                     modifier = Modifier.fillMaxWidth()
@@ -64,10 +75,8 @@ fun QuizEditorScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Add Question")
                 }
-
                 Spacer(modifier = Modifier.height(16.dp))
             }
-
             items(currentQuiz?.questions ?: emptyList()) { question ->
                 Card(
                     modifier = Modifier
@@ -79,19 +88,22 @@ fun QuizEditorScreen(
                             .fillMaxWidth()
                             .padding(16.dp)
                     ) {
-                        Text(
-                            text = question.text,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = question.text,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = { questionToDelete = question }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete Question", tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
-                        
                         Text(
                             text = "Type: ${question.type.name}",
                             style = MaterialTheme.typography.bodyMedium
                         )
-                        
                         if (question.type == QuestionType.MULTIPLE_CHOICE) {
                             question.options.forEach { option ->
                                 Text(
@@ -101,13 +113,11 @@ fun QuizEditorScreen(
                                 )
                             }
                         }
-                        
                         Text(
                             text = "Correct Answer: ${question.correctAnswer}",
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(top = 8.dp)
                         )
-                        
                         Text(
                             text = "Points: ${question.points}",
                             style = MaterialTheme.typography.bodyMedium
@@ -115,6 +125,53 @@ fun QuizEditorScreen(
                     }
                 }
             }
+            item {
+                Spacer(modifier = Modifier.height(32.dp))
+                Button(
+                    onClick = { showDeleteQuizDialog = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete Quiz")
+                    Spacer(Modifier.width(8.dp))
+                    Text("Delete Quiz")
+                }
+            }
+        }
+        // Delete Question Dialog
+        if (questionToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { questionToDelete = null },
+                title = { Text("Delete Question") },
+                text = { Text("Are you sure you want to delete this question?") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        courseViewModel.deleteQuestionFromQuiz(courseId, sectionId, quizId, questionToDelete!!.id)
+                        questionToDelete = null
+                    }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { questionToDelete = null }) { Text("Cancel") }
+                }
+            )
+        }
+        // Delete Quiz Dialog
+        if (showDeleteQuizDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteQuizDialog = false },
+                title = { Text("Delete Quiz") },
+                text = { Text("Are you sure you want to delete this quiz? This action cannot be undone.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        courseViewModel.deleteQuiz(courseId, sectionId, quizId)
+                        showDeleteQuizDialog = false
+                        navController.popBackStack()
+                    }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteQuizDialog = false }) { Text("Cancel") }
+                }
+            )
         }
     }
 
