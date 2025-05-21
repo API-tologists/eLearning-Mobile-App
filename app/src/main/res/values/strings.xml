@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">elearning</string>
+    <string name="gemini_api_key">whatever\n</string>
 </resources>
