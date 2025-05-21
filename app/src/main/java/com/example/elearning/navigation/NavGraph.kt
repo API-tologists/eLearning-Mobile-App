@@ -3,6 +3,7 @@ package com.example.elearning.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -14,6 +15,7 @@ import com.example.elearning.ui.screens.*
 import com.example.elearning.viewmodel.AuthViewModel
 import com.example.elearning.viewmodel.CourseViewModel
 import com.example.elearning.viewmodel.CreditCardViewModel
+import com.example.elearning.utils.NetworkUtils
 
 @Composable
 fun NavGraph(
@@ -24,11 +26,13 @@ fun NavGraph(
 ) {
     val authState by authViewModel.authState.collectAsState()
     val user = (authState as? AuthState.Authenticated)?.user
+    val context = LocalContext.current
 
     NavHost(
         navController = navController,
-        startDestination = when (authState) {
-            is AuthState.Authenticated -> Screen.Home.route
+        startDestination = when {
+            !NetworkUtils.isNetworkAvailable(context) -> Screen.Downloads.route
+            authState is AuthState.Authenticated -> Screen.Home.route
             else -> Screen.Login.route
         }
     ) {
@@ -215,6 +219,12 @@ fun NavGraph(
             ProfileScreen(
                 navController = navController,
                 authViewModel = authViewModel
+            )
+        }
+        composable(Screen.Downloads.route) {
+            DownloadsScreen(
+                navController = navController,
+                courseViewModel = courseViewModel
             )
         }
     }

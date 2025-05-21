@@ -28,6 +28,8 @@ import com.example.elearning.model.AuthState
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import com.example.elearning.utils.NetworkUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,6 +37,7 @@ fun LoginScreen(
     navController: NavController,
     authViewModel: AuthViewModel
 ) {
+    val context = LocalContext.current
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -59,6 +62,16 @@ fun LoginScreen(
             }
             AuthState.Loading -> {
                 isLoading = true
+            }
+        }
+    }
+
+    // Check internet connectivity on launch
+    LaunchedEffect(Unit) {
+        if (!NetworkUtils.isNetworkAvailable(context)) {
+            // If no internet, navigate to Downloads screen
+            navController.navigate(Screen.Downloads.route) {
+                popUpTo(Screen.Login.route) { inclusive = true }
             }
         }
     }
