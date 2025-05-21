@@ -73,4 +73,6 @@ dependencies {
     implementation("com.google.ai.client.generativeai:generativeai:0.6.0")
     implementation("androidx.room:room-runtime:2.7.1")
     kapt("androidx.room:room-compiler:2.7.1")
+    implementation("io.github.raamcosta.compose-destinations:core:1.9.55")
+    implementation("com.github.afreakyelf:Pdf-Viewer:1.0.3")
 }
