@@ -43,6 +43,8 @@ import com.example.elearning.local.CourseEntity
 import com.example.elearning.local.LessonEntity
 import com.example.elearning.local.SectionEntity
 import com.google.firebase.storage.FirebaseStorage
+import com.example.elearning.service.NotificationService
+import com.example.elearning.service.UserActivityTracker
 
 import java.io.File
 
@@ -95,6 +97,9 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _downloadProgress = MutableStateFlow(0f)
     val downloadProgress: StateFlow<Float> = _downloadProgress
+    
+    private val notificationService = NotificationService(application)
+    private val userActivityTracker = UserActivityTracker(application, notificationService)
     
     init {
         viewModelScope.launch {
@@ -232,6 +237,12 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                 } else {
                     Log.e(TAG, "Invalid course")
                 }
+
+                // Track lesson completion for notifications
+                userActivityTracker.trackLessonCompletion(userId, courseId, lessonId)
+                
+                // Check for incomplete quizzes
+                userActivityTracker.checkIncompleteQuizzes(userId)
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating course progress", e)
             }
@@ -748,8 +759,8 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
         hasPassed: Boolean
     ) {
         viewModelScope.launch {
-            Log.d(TAG, "saveQuizAttempt called for user: ${FirebaseAuth.getInstance().currentUser?.uid}")
             try {
+                Log.d(TAG, "saveQuizAttempt called for user: ${FirebaseAuth.getInstance().currentUser?.uid}")
                 val currentUser = FirebaseAuth.getInstance().currentUser
                 if (currentUser == null) {
                     Log.e(TAG, "User must be authenticated to save quiz attempt")
@@ -833,6 +844,9 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                         }
                     }
                 }
+
+                // Track quiz completion
+                userActivityTracker.trackQuizCompletion(getCurrentUserId(), courseId, quizId)
 
                 Log.d(TAG, "Quiz attempt saved successfully")
             } catch (e: Exception) {
@@ -1379,6 +1393,26 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
         } catch (e: Exception) {
             Log.e(TAG, "Error getting local image path", e)
             null
+        }
+    }
+
+    fun checkUserEngagement() {
+        viewModelScope.launch {
+            try {
+                val userId = getCurrentUserId()
+                if (userId.isNotEmpty()) {
+                    // Check for inactive users
+                    userActivityTracker.checkInactiveUsers()
+                    
+                    // Check for incomplete quizzes
+                    userActivityTracker.checkIncompleteQuizzes(userId)
+                    
+                    // Track course progress for resume notifications
+                    userActivityTracker.trackCourseProgress(userId, _selectedCourse.value?.id ?: "")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking user engagement", e)
+            }
         }
     }
 } 
