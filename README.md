@@ -43,6 +43,35 @@ Une application mobile Android permettant à des utilisateurs (étudiants/appren
 
 ### 2. 🧱 Cloner le projet
 
+
 ```bash
-git clone https://github.com/API-tologists/eLearning-Mobile-App/.git
+git clone https://github.com/API-tologists/eLearning-Mobile-App.git
 cd eLearning-Mobile-App
+```
+
+
+### 3. Configuration Firebase
+
+1. Allez sur [Firebase Console](https://console.firebase.google.com/) et créez un nouveau projet.
+2. Activez les services suivants :
+   - **Authentication** : Email/Password
+   - **Cloud Firestore** : pour les données utilisateurs, cours, quiz, etc.
+   - **Storage** : pour stocker des images, vidéos, et fichiers PDF.
+3. Téléchargez le fichier `google-services.json`.
+4. Placez le fichier dans le dossier `app/` de votre projet Android
+
+### 4. Configuration du SDK IA Générative (optionnel)
+
+1. Créez un projet sur [Google Cloud Console](https://console.cloud.google.com/).
+2. Activez l'API **Generative Language**.
+3. Accéder à https://aistudio.google.com/app/apikey et créez une **clé API**.
+4. Creé un fichier dans res/values, et ajoutez :```<name="gemini_api_key">Votre_Clé_API </string>```
+
+## 👨‍💻 Auteurs
+
+- Haitam Bidiouane  
+- Wail Yacoubi  
+- Yassine El Moudni  
+- Mohammed Arafa Fengiro
+
+**Encadré par :** Pr. Guermah Hatim
