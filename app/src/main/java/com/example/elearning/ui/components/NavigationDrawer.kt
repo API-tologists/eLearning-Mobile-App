@@ -3,7 +3,6 @@ package com.example.elearning.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -22,6 +21,7 @@ import coil.compose.AsyncImage
 import com.example.elearning.model.User
 import com.example.elearning.navigation.Screen
 import com.example.elearning.viewmodel.AuthViewModel
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,6 +122,17 @@ fun NavigationDrawer(
                     selected = false,
                     onClick = {
                         navController.navigate(Screen.Progress.route)
+                        onDrawerStateChange(false)
+                    },
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Filled.Add, contentDescription = "Downloads") },
+                    label = { Text("Downloads") },
+                    selected = false,
+                    onClick = {
+                        navController.navigate(Screen.Downloads.route)
                         onDrawerStateChange(false)
                     },
                     modifier = Modifier.padding(vertical = 4.dp)

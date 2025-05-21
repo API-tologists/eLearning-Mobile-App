@@ -27,7 +27,10 @@ fun CourseCard(
     progress: Int = 0,
     instructorName: String = "",
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    trailingContent: @Composable (() -> Unit)? = null
+
+
 ) {
     // Pick a soft color based on course or fallback
     val bgColor = when (course.title.hashCode() % 3) {
@@ -133,6 +136,10 @@ fun CourseCard(
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp)
                             )
                         }
+                    }
+                    if (trailingContent != null) {
+                        Spacer(Modifier.width(8.dp))
+                        trailingContent()
                     }
                 }
                 Spacer(Modifier.width(12.dp))
