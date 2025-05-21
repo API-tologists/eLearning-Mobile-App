@@ -223,5 +223,38 @@ fun NavGraph(
                 authViewModel = authViewModel
             )
         }
+        composable(
+            route = Screen.Subscription.route,
+            arguments = Screen.Subscription.arguments
+        ) { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: return@composable
+            SubscriptionScreen(
+                navController = navController,
+                courseId = courseId
+            )
+        }
+        composable(
+            route = Screen.PaymentMethod.route,
+            arguments = Screen.PaymentMethod.arguments
+        ) { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: return@composable
+            PaymentMethodScreen(
+                navController = navController,
+                creditCardViewModel = creditCardViewModel,
+                authViewModel = authViewModel,
+                courseViewModel = courseViewModel,
+                courseId = courseId
+            )
+        }
+        composable(
+            route = Screen.SubscriptionSuccess.route,
+            arguments = Screen.SubscriptionSuccess.arguments
+        ) { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: return@composable
+            SubscriptionSuccessScreen(
+                navController = navController,
+                courseId = courseId
+            )
+        }
     }
 }

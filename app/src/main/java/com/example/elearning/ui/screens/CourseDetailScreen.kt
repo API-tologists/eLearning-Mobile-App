@@ -160,9 +160,7 @@ fun CourseDetailScreen(
                         if (!isEnrolled) {
                             Button(
                                 onClick = {
-                                    user?.id?.let { userId ->
-                                        courseViewModel.enrollInCourse(userId, currentCourse.id)
-                                    }
+                                    navController.navigate(Screen.Subscription.createRoute(courseId))
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {

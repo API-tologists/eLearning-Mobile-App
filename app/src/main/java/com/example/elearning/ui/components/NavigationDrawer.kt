@@ -140,6 +140,17 @@ fun NavigationDrawer(
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
 
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Filled.Star, contentDescription = "Subscription") },
+                    label = { Text("Subscription") },
+                    selected = false,
+                    onClick = {
+                        navController.navigate(Screen.Subscription.route)
+                        onDrawerStateChange(false)
+                    },
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+
                 Spacer(modifier = Modifier.weight(1f))
 
                 // Logout Button
