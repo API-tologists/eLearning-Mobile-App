@@ -37,6 +37,13 @@ import com.example.elearning.service.GeminiService
 import android.content.Context
 import com.example.elearning.R
 import com.google.firebase.firestore.ListenerRegistration
+import com.example.elearning.local.AppDatabase
+import com.example.elearning.local.CourseEntity
+import com.example.elearning.local.LessonEntity
+import com.example.elearning.local.SectionEntity
+import com.google.firebase.storage.FirebaseStorage
+
+import java.io.File
 
 class CourseViewModel(application: Application) : AndroidViewModel(application) {
     private val TAG = "CourseViewModel"
@@ -75,6 +82,19 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
     private val _certificate = MutableStateFlow<Certificate?>(null)
     val certificate: StateFlow<Certificate?> = _certificate.asStateFlow()
     
+    private val local_db = AppDatabase.getDatabase(application)
+
+    private val storage = FirebaseStorage.getInstance()
+
+    private val _downloadedCourses = MutableStateFlow<List<Course>>(emptyList())
+    val downloadedCourses: StateFlow<List<Course>> = _downloadedCourses
+
+    private val _isDownloading = MutableStateFlow(false)
+    val isDownloading: StateFlow<Boolean> = _isDownloading
+
+    private val _downloadProgress = MutableStateFlow(0f)
+    val downloadProgress: StateFlow<Float> = _downloadProgress
+    
     init {
         viewModelScope.launch {
             repository.getAllCourses().collectLatest { courses ->
@@ -85,6 +105,8 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                 _courses.value = courses
             }
         }
+        // Load downloaded courses on init
+        loadDownloadedCourses()
     }
     
     fun loadEnrolledCourses(userId: String) {
@@ -157,43 +179,57 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                     return@launch
                 }
                 
-                Log.d(TAG, "Current enrollment state: completedLessons=${enrollment.completedLessons}, progress=${enrollment.progress}")
-                
-                // Get the course to calculate total lessons
+                // Get the course to calculate total lessons and check section completion
                 val courseRef = coursesCollection.document(courseId)
                 val course = courseRef.get().await().toObject(Course::class.java)
-                val totalLessons = course?.sections?.sumOf { it.lessons.size } ?: 0
                 
-                if (totalLessons > 0 && course != null) {
-                    // Add the new lesson to completed lessons if not already completed
-                    val updatedCompletedLessons = if (!enrollment.completedLessons.contains(lessonId)) {
-                        enrollment.completedLessons + lessonId
-                    } else {
-                        enrollment.completedLessons
+                if (course != null) {
+                    // Find which section this lesson belongs to
+                    val section = course.sections.find { section ->
+                        section.lessons.any { it.id == lessonId }
                     }
                     
-                    // Calculate progress based on completed lessons vs total lessons
-                    val progress = (updatedCompletedLessons.size * 100) / totalLessons
-                    
-                    val updatedEnrollment = enrollment.copy(
-                        completedLessons = updatedCompletedLessons,
-                        progress = progress
-                    )
-                    
-                    // Update the enrollment document
-                    enrollmentDoc.reference.set(updatedEnrollment).await()
-                    
-                    // Update the local state
-                    _selectedCourse.value = course
-                    
-                    // Generate certificate if progress reaches 100%
-                    if (progress == 100) {
-                        generateCertificate(courseId, userId)
+                    if (section != null) {
+                        // Add the new lesson to completed lessons if not already completed
+                        val updatedCompletedLessons = if (!enrollment.completedLessons.contains(lessonId)) {
+                            enrollment.completedLessons + lessonId
+                        } else {
+                            enrollment.completedLessons
+                        }
+                        
+                        // Check if all lessons in this section are now completed
+                        val sectionLessons = section.lessons.map { it.id }
+                        val isSectionCompleted = sectionLessons.all { it in updatedCompletedLessons }
+                        
+                        // Calculate progress based on completed lessons vs total lessons
+                        val totalLessons = course.sections.sumOf { it.lessons.size }
+                        val progress = (updatedCompletedLessons.size * 100) / totalLessons
+                        
+                        val updatedEnrollment = enrollment.copy(
+                            completedLessons = updatedCompletedLessons,
+                            progress = progress
+                        )
+                        
+                        // Update the enrollment document
+                        enrollmentDoc.reference.set(updatedEnrollment).await()
+                        
+                        // If section is completed, add XP
+                        if (isSectionCompleted) {
+                            updateUserXP(userId, 2) // Add 2 XP for completing a section
+                        }
+                        
+                        // Update the local state
+                        _selectedCourse.value = course
+                        
+                        // Generate certificate if progress reaches 100%
+                        if (progress == 100) {
+                            generateCertificate(courseId, userId)
+                        }
+                        
+                        Log.d(TAG, "Progress updated successfully: ${updatedCompletedLessons.size}/$totalLessons lessons completed (${progress}%)")
                     }
-                    
-                    Log.d(TAG, "Progress updated successfully: ${updatedCompletedLessons.size}/$totalLessons lessons completed (${progress}%)")
                 } else {
-                    Log.e(TAG, "Invalid course or total lessons count")
+                    Log.e(TAG, "Invalid course")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating course progress", e)
@@ -587,8 +623,14 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
 
     // You must implement this function to upload to Firebase Storage and return the download URL
     suspend fun uploadFileToFirebase(uri: Uri, mediaType: String): String {
-        // ... your upload logic here ...
-        return "https://your_download_url"
+        val extension = when (mediaType) {
+            "image" -> ".jpg"
+            "video" -> ".mp4"
+            "pdf" -> ".pdf"
+            else -> ""
+        }
+        val path = "lessons/${mediaType}s/${UUID.randomUUID()}$extension"
+        return repository.uploadFileToStorage(uri, path)
     }
 
     fun addQuizToSection(
@@ -1036,6 +1078,305 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
             } catch (e: Exception) {
                 Log.e(TAG, "Error deleting course", e)
             }
+        }
+    }
+
+    fun updateQuizDescription(courseId: String, sectionId: String, quizId: String, description: String) {
+        viewModelScope.launch {
+            try {
+                val course = _selectedCourse.value ?: return@launch
+                val updatedSections = course.sections.map { section ->
+                    if (section.id == sectionId) {
+                        val updatedQuizzes = section.quizzes.map { quiz ->
+                            if (quiz.id == quizId) quiz.copy(description = description) else quiz
+                        }
+                        section.copy(quizzes = updatedQuizzes)
+                    } else section
+                }
+                val updatedCourse = course.copy(sections = updatedSections)
+                coursesCollection.document(courseId).set(updatedCourse).await()
+                _selectedCourse.value = updatedCourse
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating quiz description", e)
+            }
+        }
+    }
+
+    fun deleteQuestionFromQuiz(courseId: String, sectionId: String, quizId: String, questionId: String) {
+        viewModelScope.launch {
+            try {
+                val course = _selectedCourse.value ?: return@launch
+                val updatedSections = course.sections.map { section ->
+                    if (section.id == sectionId) {
+                        val updatedQuizzes = section.quizzes.map { quiz ->
+                            if (quiz.id == quizId) quiz.copy(questions = quiz.questions.filter { it.id != questionId }) else quiz
+                        }
+                        section.copy(quizzes = updatedQuizzes)
+                    } else section
+                }
+                val updatedCourse = course.copy(sections = updatedSections)
+                coursesCollection.document(courseId).set(updatedCourse).await()
+                _selectedCourse.value = updatedCourse
+            } catch (e: Exception) {
+                Log.e(TAG, "Error deleting question from quiz", e)
+            }
+        }
+    }
+
+    private suspend fun updateUserXP(userId: String, xpToAdd: Int) {
+        try {
+            val userRef = db.collection("users").document(userId)
+            db.runTransaction { transaction ->
+                val snapshot = transaction.get(userRef)
+                val user = snapshot.toObject(User::class.java)
+                if (user != null) {
+                    val updatedUser = user.copy(xp = user.xp + xpToAdd)
+                    transaction.set(userRef, updatedUser)
+                }
+            }.await()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating user XP", e)
+        }
+    }
+
+    fun completeSection(courseId: String, sectionId: String) {
+        viewModelScope.launch {
+            try {
+                val userId = getCurrentUserId()
+                if (userId.isEmpty()) return@launch
+
+                // Update enrollment progress
+                val enrollmentRef = enrollmentsCollection.document("${userId}_${courseId}")
+                db.runTransaction { transaction ->
+                    val snapshot = transaction.get(enrollmentRef)
+                    val enrollment = snapshot.toObject(CourseEnrollment::class.java)
+                    if (enrollment != null) {
+                        val updatedEnrollment = enrollment.copy(
+                            progress = enrollment.progress + 1
+                        )
+                        transaction.set(enrollmentRef, updatedEnrollment)
+                    }
+                }.await()
+
+                // Add XP for completing the section
+                updateUserXP(userId, 2) // Add 2 XP for completing a section
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error completing section", e)
+            }
+        }
+    }
+
+    fun loadDownloadedCourses() {
+        viewModelScope.launch {
+            try {
+                val courses = local_db.courseDao().getAllDownloadedCourses()
+                val downloadedCourses = courses.map { courseEntity ->
+                    val sections = local_db.courseDao().getSectionsForCourse(courseEntity.id)
+                    val courseSections = sections.map { sectionEntity ->
+                        val lessons = local_db.courseDao().getLessonsForSection(sectionEntity.id)
+                        CourseSection(
+                            id = sectionEntity.id,
+                            title = sectionEntity.title,
+                            lessons = lessons.map { lessonEntity ->
+                                Lesson(
+                                    id = lessonEntity.id,
+                                    title = lessonEntity.title,
+                                    description = lessonEntity.description,
+                                    duration = lessonEntity.duration,
+                                    videoUrl = lessonEntity.localVideoPath ?: "",
+                                    pdfUrl = lessonEntity.localPdfPath ?: "",
+                                    imageUrl = lessonEntity.localImagePath ?: ""
+                                )
+                            }
+                        )
+                    }
+                    Course(
+                        id = courseEntity.id,
+                        title = courseEntity.title,
+                        description = courseEntity.description,
+                        instructor = courseEntity.instructor,
+                        category = courseEntity.category,
+                        sections = courseSections
+                    )
+                }
+                _downloadedCourses.value = downloadedCourses
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading downloaded courses", e)
+            }
+        }
+    }
+
+    fun downloadCourse(course: Course) {
+        viewModelScope.launch {
+            try {
+                _isDownloading.value = true
+                _downloadProgress.value = 0f
+
+                // Save course
+                val courseEntity = CourseEntity(
+                    id = course.id,
+                    title = course.title,
+                    description = course.description,
+                    instructor = course.instructor,
+                    category = course.category
+                )
+                local_db.courseDao().insertCourse(courseEntity)
+
+                // Save sections
+                val sectionEntities = course.sections.mapIndexed { index, section ->
+                    SectionEntity(
+                        id = section.id,
+                        courseId = course.id,
+                        title = section.title,
+                        order = index
+                    )
+                }
+                local_db.courseDao().insertSections(sectionEntities)
+
+                // Calculate total items to download
+                var totalItems = 0
+                course.sections.forEach { section ->
+                    section.lessons.forEach { lesson ->
+                        if (lesson.videoUrl.isNotEmpty()) totalItems++
+                        if (lesson.pdfUrl.isNotEmpty()) totalItems++
+                        if (lesson.imageUrl.isNotEmpty()) totalItems++
+                    }
+                }
+                var downloadedItems = 0
+
+                // Download lessons and their content
+                course.sections.forEach { section ->
+                    section.lessons.forEachIndexed { index, lesson ->
+                        val lessonEntity = LessonEntity(
+                            id = lesson.id,
+                            sectionId = section.id,
+                            courseId = course.id,
+                            title = lesson.title,
+                            description = lesson.description,
+                            duration = lesson.duration,
+                            order = index
+                        )
+
+                        // Download video if exists
+                        if (lesson.videoUrl.isNotEmpty()) {
+                            val videoPath = downloadFile(lesson.videoUrl, "${course.id}_${lesson.id}_video.mp4")
+                            lessonEntity.localVideoPath = videoPath
+                            downloadedItems++
+                            _downloadProgress.value = downloadedItems.toFloat() / totalItems
+                        }
+
+                        // Download PDF if exists
+                        if (lesson.pdfUrl.isNotEmpty()) {
+                            val pdfPath = downloadFile(lesson.pdfUrl, "${course.id}_${lesson.id}_pdf.pdf")
+                            lessonEntity.localPdfPath = pdfPath
+                            downloadedItems++
+                            _downloadProgress.value = downloadedItems.toFloat() / totalItems
+                        }
+
+                        // Download image if exists
+                        if (lesson.imageUrl.isNotEmpty()) {
+                            val imagePath = downloadFile(lesson.imageUrl, "${course.id}_${lesson.id}_image.jpg")
+                            lessonEntity.localImagePath = imagePath
+                            downloadedItems++
+                            _downloadProgress.value = downloadedItems.toFloat() / totalItems
+                        }
+
+                        local_db.courseDao().insertLesson(lessonEntity)
+                    }
+                }
+
+                // Update downloaded courses list
+                loadDownloadedCourses()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error downloading course", e)
+                throw e
+            } finally {
+                _isDownloading.value = false
+                _downloadProgress.value = 0f
+            }
+        }
+    }
+
+    private suspend fun downloadFile(url: String, fileName: String): String {
+        val storageRef = storage.getReferenceFromUrl(url)
+        val localFile = File(getApplication<Application>().getExternalFilesDir(null), fileName)
+        
+        // Create parent directories if they don't exist
+        localFile.parentFile?.mkdirs()
+        
+        // Download file
+        storageRef.getFile(localFile).await()
+        
+        // Verify file exists and has content
+        if (!localFile.exists() || localFile.length() == 0L) {
+            throw Exception("Failed to download file: $fileName")
+        }
+        
+        return localFile.absolutePath
+    }
+
+    fun removeDownloadedCourse(courseId: String) {
+        viewModelScope.launch {
+            try {
+                // Get all lessons to delete their files
+                val lessons = local_db.courseDao().getLessonsForCourse(courseId)
+                
+                // Delete all downloaded files
+                lessons.forEach { lesson ->
+                    lesson.localVideoPath?.let { File(it).delete() }
+                    lesson.localPdfPath?.let { File(it).delete() }
+                    lesson.localImagePath?.let { File(it).delete() }
+                }
+
+                // Delete from database
+                local_db.courseDao().deleteLessonsForCourse(courseId)
+                local_db.courseDao().deleteSectionsForCourse(courseId)
+                local_db.courseDao().deleteCourseById(courseId)
+                
+                loadDownloadedCourses()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error removing downloaded course", e)
+            }
+        }
+    }
+
+    suspend fun getLocalVideoPath(courseId: String, lessonId: String): String? {
+        return try {
+            val lesson = local_db.courseDao().getLessonsForCourse(courseId)
+                .find { it.id == lessonId }
+            lesson?.localVideoPath?.let { path ->
+                if (File(path).exists()) path else null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting local video path", e)
+            null
+        }
+    }
+
+    suspend fun getLocalPdfPath(courseId: String, lessonId: String): String? {
+        return try {
+            val lesson = local_db.courseDao().getLessonsForCourse(courseId)
+                .find { it.id == lessonId }
+            lesson?.localPdfPath?.let { path ->
+                if (File(path).exists()) path else null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting local PDF path", e)
+            null
+        }
+    }
+
+    suspend fun getLocalImagePath(courseId: String, lessonId: String): String? {
+        return try {
+            val lesson = local_db.courseDao().getLessonsForCourse(courseId)
+                .find { it.id == lessonId }
+            lesson?.localImagePath?.let { path ->
+                if (File(path).exists()) path else null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting local image path", e)
+            null
         }
     }
 } 

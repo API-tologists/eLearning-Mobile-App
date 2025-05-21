@@ -166,6 +166,17 @@ fun LessonScreen(
                     }
                 }
 
+Spacer(modifier = Modifier.height(16.dp))
+
+                // PDF viewer
+                if (!currentLesson?.pdfUrl.isNullOrEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        PdfPreview(currentLesson!!.pdfUrl)
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Image viewer

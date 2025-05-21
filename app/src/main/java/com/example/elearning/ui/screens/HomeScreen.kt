@@ -265,18 +265,6 @@ fun HomeScreen(
                                 Spacer(modifier = Modifier.height(12.dp))
                             }
 
-                            item {
-                                Text(
-                                    text = "Quick Actions",
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
-                            item {
-                                QuickActionsGrid(navController)
-                            }
-
                             if (enrolledCourses.isNotEmpty()) {
                                 item {
                                     Text(
@@ -300,58 +288,6 @@ fun HomeScreen(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun QuickActionsGrid(navController: NavController) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            QuickActionButton(
-                text = "Assignments",
-                onClick = { navController.navigate(Screen.Assignments.route) }
-            )
-            QuickActionButton(
-                text = "Quizzes",
-                onClick = { navController.navigate(Screen.Quizzes.route) }
-            )
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            QuickActionButton(
-                text = "Schedule",
-                onClick = { navController.navigate(Screen.Schedule.route) }
-            )
-            QuickActionButton(
-                text = "Progress",
-                onClick = { navController.navigate(Screen.Progress.route) }
-            )
-        }
-    }
-}
-
-@Composable
-private fun QuickActionButton(
-    text: String,
-    onClick: () -> Unit
-) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier
-            .width(156.dp)
-            .height(80.dp)
-    ) {
-        Text(text)
     }
 }
 

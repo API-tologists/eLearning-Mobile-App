@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
-
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,6 +27,8 @@ import com.example.elearning.navigation.Screen
 import com.example.elearning.viewmodel.AuthViewModel
 import com.example.elearning.viewmodel.CourseViewModel
 import com.example.elearning.ui.components.RatingDialog
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +44,10 @@ fun CourseDetailScreen(
     val enrolledCourses by courseViewModel.enrolledCourses.collectAsState()
     var showRatingDialog by remember { mutableStateOf(false) }
     var courseProgress by remember { mutableStateOf(0) }
+    val isDownloading by courseViewModel.isDownloading.collectAsState()
+    val downloadProgress by courseViewModel.downloadProgress.collectAsState()
+    val downloadedCourses by courseViewModel.downloadedCourses.collectAsState()
+    val isDownloaded = course?.let { downloadedCourses.contains(it) } ?: false
 
     // Calculate if user is enrolled
     val isEnrolled = remember(course, enrolledCourses) {
@@ -76,6 +81,36 @@ fun CourseDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (course != null) {
+                        if (isDownloading) {
+                            // Show download progress
+                            LinearProgressIndicator(
+                                progress = downloadProgress,
+                                modifier = Modifier
+                                    .width(100.dp)
+                                    .padding(horizontal = 16.dp)
+                            )
+                        } else {
+                            // Show download button
+                            IconButton(
+                                onClick = {
+                                    course?.let { courseViewModel.downloadCourse(it) }
+                                },
+                                enabled = !isDownloaded
+                            ) {
+                                Icon(
+                                    imageVector = if (isDownloaded) Icons.Default.Done else Icons.Default.Add,
+                                    contentDescription = if (isDownloaded) "Downloaded" else "Download",
+                                    tint = if (isDownloaded) 
+                                        MaterialTheme.colorScheme.primary 
+                                    else 
+                                        MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
                     }
                 }
             )
