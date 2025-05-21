@@ -14,7 +14,7 @@ import com.example.elearning.model.UserRole
 import com.example.elearning.ui.screens.*
 import com.example.elearning.viewmodel.AuthViewModel
 import com.example.elearning.viewmodel.CourseViewModel
-import com.example.elearning.viewmodel.CreditCardViewMode
+import com.example.elearning.viewmodel.CreditCardViewModel
 import com.example.elearning.viewmodel.NoteViewModel
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.remember

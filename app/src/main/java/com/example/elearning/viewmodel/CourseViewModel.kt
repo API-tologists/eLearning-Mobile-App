@@ -312,7 +312,6 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
         lessonTitle: String,
         lessonDescription: String,
         lessonVideoUrl: String,
-        lessonDuration: String,
         lessonPdfUrl: String,
         lessonImageUrl: String
     ) {
@@ -326,7 +325,6 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                             title = lessonTitle,
                             description = lessonDescription,
                             videoUrl = lessonVideoUrl,
-                            duration = lessonDuration,
                             pdfUrl = lessonPdfUrl,
                             imageUrl = lessonImageUrl
                         )
@@ -388,7 +386,6 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
         sectionId: String,
         lessonTitle: String,
         lessonDescription: String,
-        lessonDuration: String,
         videoUri: Uri?,
         pdfUri: Uri?,
         imageUri: Uri?
@@ -401,7 +398,6 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                     Log.e(TAG, "User must be authenticated to upload files")
                     return@launch
                 }
-
                 // Generate unique file names with extensions
                 val videoPath = videoUri?.let { 
                     val extension = getFileExtension(it)
@@ -415,7 +411,6 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                     val extension = getFileExtension(it)
                     "lessons/images/${UUID.randomUUID()}$extension"
                 }
-
                 // Upload files with proper error handling
                 val videoUrl = videoUri?.let { 
                     try {
@@ -425,7 +420,6 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                         ""
                     }
                 } ?: ""
-
                 val pdfUrl = pdfUri?.let { 
                     try {
                         repository.uploadFileToStorage(it, pdfPath!!)
@@ -434,7 +428,6 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                         ""
                     }
                 } ?: ""
-
                 val imageUrl = imageUri?.let { 
                     try {
                         repository.uploadFileToStorage(it, imagePath!!)
@@ -443,7 +436,6 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                         ""
                     }
                 } ?: ""
-
                 // Add the lesson with the uploaded file URLs
                 addLessonToSection(
                     courseId = courseId,
@@ -451,11 +443,9 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                     lessonTitle = lessonTitle,
                     lessonDescription = lessonDescription,
                     lessonVideoUrl = videoUrl,
-                    lessonDuration = lessonDuration,
                     lessonPdfUrl = pdfUrl,
                     lessonImageUrl = imageUrl
                 )
-
                 Log.d(TAG, "Lesson added successfully with files")
             } catch (e: Exception) {
                 Log.e(TAG, "Error uploading files", e)
@@ -504,8 +494,7 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
         sectionId: String,
         lessonId: String,
         title: String,
-        description: String,
-        duration: String
+        description: String
     ) {
         viewModelScope.launch {
             try {
@@ -516,8 +505,7 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                             if (lesson.id == lessonId) {
                                 lesson.copy(
                                     title = title,
-                                    description = description,
-                                    duration = duration
+                                    description = description
                                 )
                             } else lesson
                         }
@@ -525,11 +513,9 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                     } else section
                 }
                 val updatedCourse = course.copy(sections = updatedSections)
-                
                 // Update the course in Firestore
                 coursesCollection.document(courseId).set(updatedCourse).await()
                 _selectedCourse.value = updatedCourse
-                
                 Log.d(TAG, "Lesson updated successfully: $title")
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating lesson", e)
@@ -1377,6 +1363,31 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
         } catch (e: Exception) {
             Log.e(TAG, "Error getting local image path", e)
             null
+        }
+    }
+
+    fun updateCourseImage(courseId: String, imageUri: Uri) {
+        viewModelScope.launch {
+            try {
+                // 1. Upload to Firebase Storage
+                val storageRef = FirebaseStorage.getInstance().reference.child("course_images/${UUID.randomUUID()}.jpg")
+                val uploadTask = storageRef.putFile(imageUri)
+                uploadTask.await() // Wait for upload to finish
+
+                // 2. Get download URL
+                val downloadUrl = storageRef.downloadUrl.await().toString()
+
+                // 3. Update Firestore
+                val courseDoc = coursesCollection.document(courseId)
+                courseDoc.update("imageUrl", downloadUrl).await()
+
+                // 4. Optionally update local state
+                val updatedCourse = _selectedCourse.value?.copy(imageUrl = downloadUrl)
+                _selectedCourse.value = updatedCourse
+
+            } catch (e: Exception) {
+                Log.e("CourseViewModel", "Error uploading course image", e)
+            }
         }
     }
 } 

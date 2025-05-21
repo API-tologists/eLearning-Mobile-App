@@ -279,7 +279,6 @@ fun LessonDetailsScreen(
     if (showEditDialog) {
         var title by remember { mutableStateOf(currentLesson?.title ?: "") }
         var description by remember { mutableStateOf(currentLesson?.description ?: "") }
-        var duration by remember { mutableStateOf(currentLesson?.duration ?: "") }
 
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
@@ -301,12 +300,6 @@ fun LessonDetailsScreen(
                         label = { Text("Description") },
                         modifier = Modifier.fillMaxWidth()
                     )
-                    OutlinedTextField(
-                        value = duration,
-                        onValueChange = { duration = it },
-                        label = { Text("Duration") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
             },
             confirmButton = {
@@ -318,8 +311,7 @@ fun LessonDetailsScreen(
                                 sectionId = sectionId,
                                 lessonId = lesson.id,
                                 title = title,
-                                description = description,
-                                duration = duration
+                                description = description
                             )
                         }
                         showEditDialog = false

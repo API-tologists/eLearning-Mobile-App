@@ -32,6 +32,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Close
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,10 +101,32 @@ fun CourseEditorScreen(
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                     ) {
-                        var editableDescription by remember { mutableStateOf(c.description) }
+                        var editableDescription by remember { mutableStateOf("") }
                         var editableCategory by remember { mutableStateOf(category) }
                         Column(Modifier.padding(16.dp)) {
                             Text("Course Info", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(8.dp))
+                            // Show course image if available
+                            if (c.imageUrl.isNotBlank()) {
+                                AsyncImage(
+                                    model = c.imageUrl,
+                                    contentDescription = "Course image",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(180.dp),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Spacer(Modifier.height(8.dp))
+                            }
+                            // Image picker button
+                            val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+                                uri?.let {
+                                    courseViewModel.updateCourseImage(c.id, it)
+                                }
+                            }
+                            Button(onClick = { imagePicker.launch("image/*") }) {
+                                Text("Change Image")
+                            }
                             Spacer(Modifier.height(8.dp))
                             Text(
                                 text = c.title,
@@ -420,7 +444,6 @@ fun CourseEditorScreen(
     if (showAddLessonDialog.first && course != null && showAddLessonDialog.second >= 0) {
         var lessonTitle by remember { mutableStateOf("") }
         var lessonDescription by remember { mutableStateOf("") }
-        var lessonDuration by remember { mutableStateOf("") }
 
         // File picker state
         val videoUri = remember { mutableStateOf<Uri?>(null) }
@@ -435,7 +458,9 @@ fun CourseEditorScreen(
             pdfUri.value = uri
         }
         val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-            imageUri.value = uri
+            uri?.let {
+                courseViewModel.updateCourseImage(courseId, it)
+            }
         }
 
         AlertDialog(
@@ -453,12 +478,6 @@ fun CourseEditorScreen(
                         value = lessonDescription,
                         onValueChange = { lessonDescription = it },
                         label = { Text("Lesson Description") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = lessonDuration,
-                        onValueChange = { lessonDuration = it },
-                        label = { Text("Duration") },
                         modifier = Modifier.fillMaxWidth()
                     )
                     Button(onClick = { videoPicker.launch("video/*") }) {
@@ -482,7 +501,6 @@ fun CourseEditorScreen(
                                 sectionId = sectionId,
                                 lessonTitle = lessonTitle,
                                 lessonDescription = lessonDescription,
-                                lessonDuration = lessonDuration,
                                 videoUri = videoUri.value,
                                 pdfUri = pdfUri.value,
                                 imageUri = imageUri.value

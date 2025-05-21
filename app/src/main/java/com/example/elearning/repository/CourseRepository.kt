@@ -177,7 +177,6 @@ class CourseRepository {
         lessonTitle: String,
         lessonDescription: String = "",
         lessonVideoUrl: String = "",
-        lessonDuration: String = "",
         lessonPdfUrl: String = "",
         lessonImageUrl: String = ""
     ) {
@@ -186,7 +185,6 @@ class CourseRepository {
             title = lessonTitle,
             description = lessonDescription,
             videoUrl = lessonVideoUrl,
-            duration = lessonDuration,
             pdfUrl = lessonPdfUrl,
             imageUrl = lessonImageUrl
         )
