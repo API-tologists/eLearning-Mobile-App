@@ -29,6 +29,20 @@ import androidx.media3.ui.PlayerView
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
+import android.content.Intent
+import android.widget.Toast
+import android.graphics.Bitmap
+import android.graphics.pdf.PdfRenderer
+import android.os.ParcelFileDescriptor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
+import java.net.URL
+import androidx.compose.ui.graphics.asImageBitmap
+import android.os.Environment
+import java.io.IOException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -226,18 +240,7 @@ fun LessonDetailsScreen(
                         }
                         if (lesson.pdfUrl.isNotEmpty()) {
                             Spacer(Modifier.height(8.dp))
-                            AndroidView(
-                                factory = { ctx ->
-                                    WebView(ctx).apply {
-                                        webViewClient = WebViewClient()
-                                        loadUrl(lesson.pdfUrl)
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(220.dp)
-                                    .padding(bottom = 8.dp)
-                            )
+                            PdfPreview(lesson.pdfUrl)
                         }
                     }
                 }
@@ -331,5 +334,133 @@ fun LessonDetailsScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+fun PdfPreview(pdfUrl: String) {
+    val context = LocalContext.current
+    var localFile by remember { mutableStateOf<File?>(null) }
+    var pageCount by remember { mutableStateOf(0) }
+    var currentPage by remember { mutableStateOf(0) }
+    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var isDownloading by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    // Download PDF for preview
+    LaunchedEffect(pdfUrl) {
+        isLoading = true
+        error = null
+        try {
+            withContext(Dispatchers.IO) {
+                val tempFile = File(context.cacheDir, "temp_lesson.pdf")
+                URL(pdfUrl).openStream().use { input ->
+                    FileOutputStream(tempFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                localFile = tempFile
+            }
+        } catch (e: Exception) {
+            error = e.message
+        } finally {
+            isLoading = false
+        }
+    }
+
+    // Render PDF page
+    LaunchedEffect(localFile, currentPage) {
+        if (localFile != null) {
+            isLoading = true
+            error = null
+            try {
+                withContext(Dispatchers.IO) {
+                    val fileDescriptor = ParcelFileDescriptor.open(localFile, ParcelFileDescriptor.MODE_READ_ONLY)
+                    val renderer = PdfRenderer(fileDescriptor)
+                    pageCount = renderer.pageCount
+                    val page = renderer.openPage(currentPage)
+                    val bmp = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+                    page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    page.close()
+                    renderer.close()
+                    fileDescriptor.close()
+                    bitmap = bmp
+                }
+            } catch (e: Exception) {
+                error = e.message
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        when {
+            isLoading -> {
+                CircularProgressIndicator(modifier = Modifier.padding(32.dp))
+            }
+            error != null -> {
+                Text("Error loading PDF: $error", color = MaterialTheme.colorScheme.error)
+            }
+            bitmap != null -> {
+                Image(
+                    bitmap = bitmap!!.asImageBitmap(),
+                    contentDescription = "PDF Page",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .padding(8.dp)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Button(
+                        onClick = { if (currentPage > 0) currentPage-- },
+                        enabled = currentPage > 0
+                    ) { Text("Previous") }
+                    Text("Page ${currentPage + 1} of $pageCount", modifier = Modifier.align(Alignment.CenterVertically))
+                    Button(
+                        onClick = { if (currentPage < pageCount - 1) currentPage++ },
+                        enabled = currentPage < pageCount - 1
+                    ) { Text("Next") }
+                }
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = {
+                        scope.launch {
+                            isDownloading = true
+                            var fileName = ""
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                                    fileName = "lesson_${System.currentTimeMillis()}.pdf"
+                                    val destFile = File(downloadsDir, fileName)
+                                    URL(pdfUrl).openStream().use { input ->
+                                        FileOutputStream(destFile).use { output ->
+                                            input.copyTo(output)
+                                        }
+                                    }
+                                }
+                                Toast.makeText(context, "PDF downloaded to Downloads/$fileName", Toast.LENGTH_LONG).show()
+                            } catch (e: IOException) {
+                                Toast.makeText(context, "Download failed: ${e.message}", Toast.LENGTH_LONG).show()
+                            } finally {
+                                isDownloading = false
+                            }
+                        }
+                    },
+                    enabled = !isDownloading
+                ) {
+                    if (isDownloading) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text("Download PDF")
+                }
+            }
+        }
     }
 } 

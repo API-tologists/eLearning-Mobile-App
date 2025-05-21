@@ -256,5 +256,11 @@ fun NavGraph(
                 courseId = courseId
             )
         }
+        composable(Screen.Downloads.route) {
+            DownloadsScreen(
+                navController = navController,
+                courseViewModel = courseViewModel
+            )
+        }
     }
 }

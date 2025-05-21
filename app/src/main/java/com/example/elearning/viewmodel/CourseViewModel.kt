@@ -1,5 +1,6 @@
 package com.example.elearning.viewmodel
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -37,6 +38,13 @@ import com.example.elearning.service.GeminiService
 import android.content.Context
 import com.example.elearning.R
 import com.google.firebase.firestore.ListenerRegistration
+import com.example.elearning.local.AppDatabase
+import com.example.elearning.local.CourseEntity
+import com.example.elearning.local.LessonEntity
+import com.example.elearning.local.SectionEntity
+import com.google.firebase.storage.FirebaseStorage
+
+import java.io.File
 
 class CourseViewModel(application: Application) : AndroidViewModel(application) {
     private val TAG = "CourseViewModel"
@@ -75,6 +83,19 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
     private val _certificate = MutableStateFlow<Certificate?>(null)
     val certificate: StateFlow<Certificate?> = _certificate.asStateFlow()
     
+    private val local_db = AppDatabase.getDatabase(application)
+
+    private val storage = FirebaseStorage.getInstance()
+
+    private val _downloadedCourses = MutableStateFlow<List<Course>>(emptyList())
+    val downloadedCourses: StateFlow<List<Course>> = _downloadedCourses
+
+    private val _isDownloading = MutableStateFlow(false)
+    val isDownloading: StateFlow<Boolean> = _isDownloading
+
+    private val _downloadProgress = MutableStateFlow(0f)
+    val downloadProgress: StateFlow<Float> = _downloadProgress
+    
     init {
         viewModelScope.launch {
             repository.getAllCourses().collectLatest { courses ->
@@ -85,6 +106,8 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
                 _courses.value = courses
             }
         }
+        // Load downloaded courses on init
+        loadDownloadedCourses()
     }
     
     fun loadEnrolledCourses(userId: String) {
@@ -601,8 +624,14 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
 
     // You must implement this function to upload to Firebase Storage and return the download URL
     suspend fun uploadFileToFirebase(uri: Uri, mediaType: String): String {
-        // ... your upload logic here ...
-        return "https://your_download_url"
+        val extension = when (mediaType) {
+            "image" -> ".jpg"
+            "video" -> ".mp4"
+            "pdf" -> ".pdf"
+            else -> ""
+        }
+        val path = "lessons/${mediaType}s/${UUID.randomUUID()}$extension"
+        return repository.uploadFileToStorage(uri, path)
     }
 
     fun addQuizToSection(
@@ -873,6 +902,7 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    @SuppressLint("NewApi")
     private fun generateCertificateNumber(): String {
         val year = java.time.LocalDate.now().year
         val random = (10000..99999).random()
@@ -1136,6 +1166,219 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
             } catch (e: Exception) {
                 Log.e(TAG, "Error completing section", e)
             }
+        }
+    }
+
+    fun loadDownloadedCourses() {
+        viewModelScope.launch {
+            try {
+                val courses = local_db.courseDao().getAllDownloadedCourses()
+                val downloadedCourses = courses.map { courseEntity ->
+                    val sections = local_db.courseDao().getSectionsForCourse(courseEntity.id)
+                    val courseSections = sections.map { sectionEntity ->
+                        val lessons = local_db.courseDao().getLessonsForSection(sectionEntity.id)
+                        CourseSection(
+                            id = sectionEntity.id,
+                            title = sectionEntity.title,
+                            lessons = lessons.map { lessonEntity ->
+                                Lesson(
+                                    id = lessonEntity.id,
+                                    title = lessonEntity.title,
+                                    description = lessonEntity.description,
+                                    duration = lessonEntity.duration,
+                                    videoUrl = lessonEntity.localVideoPath ?: "",
+                                    pdfUrl = lessonEntity.localPdfPath ?: "",
+                                    imageUrl = lessonEntity.localImagePath ?: ""
+                                )
+                            }
+                        )
+                    }
+                    Course(
+                        id = courseEntity.id,
+                        title = courseEntity.title,
+                        description = courseEntity.description,
+                        instructor = courseEntity.instructor,
+                        category = courseEntity.category,
+                        sections = courseSections
+                    )
+                }
+                _downloadedCourses.value = downloadedCourses
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading downloaded courses", e)
+            }
+        }
+    }
+
+    fun downloadCourse(course: Course) {
+        viewModelScope.launch {
+            try {
+                _isDownloading.value = true
+                _downloadProgress.value = 0f
+
+                // Save course
+                val courseEntity = CourseEntity(
+                    id = course.id,
+                    title = course.title,
+                    description = course.description,
+                    instructor = course.instructor,
+                    category = course.category
+                )
+                local_db.courseDao().insertCourse(courseEntity)
+
+                // Save sections
+                val sectionEntities = course.sections.mapIndexed { index, section ->
+                    SectionEntity(
+                        id = section.id,
+                        courseId = course.id,
+                        title = section.title,
+                        order = index
+                    )
+                }
+                local_db.courseDao().insertSections(sectionEntities)
+
+                // Calculate total items to download
+                var totalItems = 0
+                course.sections.forEach { section ->
+                    section.lessons.forEach { lesson ->
+                        if (lesson.videoUrl.isNotEmpty()) totalItems++
+                        if (lesson.pdfUrl.isNotEmpty()) totalItems++
+                        if (lesson.imageUrl.isNotEmpty()) totalItems++
+                    }
+                }
+                var downloadedItems = 0
+
+                // Download lessons and their content
+                course.sections.forEach { section ->
+                    section.lessons.forEachIndexed { index, lesson ->
+                        val lessonEntity = LessonEntity(
+                            id = lesson.id,
+                            sectionId = section.id,
+                            courseId = course.id,
+                            title = lesson.title,
+                            description = lesson.description,
+                            duration = lesson.duration,
+                            order = index
+                        )
+
+                        // Download video if exists
+                        if (lesson.videoUrl.isNotEmpty()) {
+                            val videoPath = downloadFile(lesson.videoUrl, "${course.id}_${lesson.id}_video.mp4")
+                            lessonEntity.localVideoPath = videoPath
+                            downloadedItems++
+                            _downloadProgress.value = downloadedItems.toFloat() / totalItems
+                        }
+
+                        // Download PDF if exists
+                        if (lesson.pdfUrl.isNotEmpty()) {
+                            val pdfPath = downloadFile(lesson.pdfUrl, "${course.id}_${lesson.id}_pdf.pdf")
+                            lessonEntity.localPdfPath = pdfPath
+                            downloadedItems++
+                            _downloadProgress.value = downloadedItems.toFloat() / totalItems
+                        }
+
+                        // Download image if exists
+                        if (lesson.imageUrl.isNotEmpty()) {
+                            val imagePath = downloadFile(lesson.imageUrl, "${course.id}_${lesson.id}_image.jpg")
+                            lessonEntity.localImagePath = imagePath
+                            downloadedItems++
+                            _downloadProgress.value = downloadedItems.toFloat() / totalItems
+                        }
+
+                        local_db.courseDao().insertLesson(lessonEntity)
+                    }
+                }
+
+                // Update downloaded courses list
+                loadDownloadedCourses()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error downloading course", e)
+                throw e
+            } finally {
+                _isDownloading.value = false
+                _downloadProgress.value = 0f
+            }
+        }
+    }
+
+    private suspend fun downloadFile(url: String, fileName: String): String {
+        val storageRef = storage.getReferenceFromUrl(url)
+        val localFile = File(getApplication<Application>().getExternalFilesDir(null), fileName)
+        
+        // Create parent directories if they don't exist
+        localFile.parentFile?.mkdirs()
+        
+        // Download file
+        storageRef.getFile(localFile).await()
+        
+        // Verify file exists and has content
+        if (!localFile.exists() || localFile.length() == 0L) {
+            throw Exception("Failed to download file: $fileName")
+        }
+        
+        return localFile.absolutePath
+    }
+
+    fun removeDownloadedCourse(courseId: String) {
+        viewModelScope.launch {
+            try {
+                // Get all lessons to delete their files
+                val lessons = local_db.courseDao().getLessonsForCourse(courseId)
+                
+                // Delete all downloaded files
+                lessons.forEach { lesson ->
+                    lesson.localVideoPath?.let { File(it).delete() }
+                    lesson.localPdfPath?.let { File(it).delete() }
+                    lesson.localImagePath?.let { File(it).delete() }
+                }
+
+                // Delete from database
+                local_db.courseDao().deleteLessonsForCourse(courseId)
+                local_db.courseDao().deleteSectionsForCourse(courseId)
+                local_db.courseDao().deleteCourseById(courseId)
+                
+                loadDownloadedCourses()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error removing downloaded course", e)
+            }
+        }
+    }
+
+    suspend fun getLocalVideoPath(courseId: String, lessonId: String): String? {
+        return try {
+            val lesson = local_db.courseDao().getLessonsForCourse(courseId)
+                .find { it.id == lessonId }
+            lesson?.localVideoPath?.let { path ->
+                if (File(path).exists()) path else null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting local video path", e)
+            null
+        }
+    }
+
+    suspend fun getLocalPdfPath(courseId: String, lessonId: String): String? {
+        return try {
+            val lesson = local_db.courseDao().getLessonsForCourse(courseId)
+                .find { it.id == lessonId }
+            lesson?.localPdfPath?.let { path ->
+                if (File(path).exists()) path else null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting local PDF path", e)
+            null
+        }
+    }
+
+    suspend fun getLocalImagePath(courseId: String, lessonId: String): String? {
+        return try {
+            val lesson = local_db.courseDao().getLessonsForCourse(courseId)
+                .find { it.id == lessonId }
+            lesson?.localImagePath?.let { path ->
+                if (File(path).exists()) path else null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting local image path", e)
+            null
         }
     }
 } 

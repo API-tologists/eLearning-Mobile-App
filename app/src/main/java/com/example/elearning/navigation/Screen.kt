@@ -83,4 +83,5 @@ sealed class Screen(val route: String) {
         )
         fun createRoute(courseId: String) = "subscription_success/$courseId"
     }
+    object Downloads : Screen("downloads")
 } 
