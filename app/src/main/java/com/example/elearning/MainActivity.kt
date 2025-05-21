@@ -18,6 +18,7 @@ import com.example.elearning.ui.theme.ELearningTheme
 import com.example.elearning.viewmodel.AuthViewModel
 import com.example.elearning.viewmodel.CourseViewModel
 import com.example.elearning.viewmodel.CreditCardViewModel
+import com.example.elearning.viewmodel.NoteViewModel
 
 class MainActivity : ComponentActivity() {
     private val TAG = "MainActivity"
@@ -36,12 +37,14 @@ class MainActivity : ComponentActivity() {
                     val authViewModel = remember { AuthViewModel() }
                     val courseViewModel = remember { CourseViewModel(application) }
                     val creditCardViewModel = remember { CreditCardViewModel() }
+                    val noteViewModel = remember { NoteViewModel() }
 
                     NavGraph(
                         navController = navController,
                         authViewModel = authViewModel,
                         courseViewModel = courseViewModel,
-                        creditCardViewModel = creditCardViewModel
+                        creditCardViewModel = creditCardViewModel,
+                        noteViewModel = noteViewModel
                     )
                 }
             }

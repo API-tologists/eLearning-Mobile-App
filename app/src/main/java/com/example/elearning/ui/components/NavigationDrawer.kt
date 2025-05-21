@@ -21,6 +21,8 @@ import coil.compose.AsyncImage
 import com.example.elearning.model.User
 import com.example.elearning.navigation.Screen
 import com.example.elearning.viewmodel.AuthViewModel
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,7 +90,7 @@ fun NavigationDrawer(
                     }
                 }
 
-                Divider(
+                HorizontalDivider(
                     modifier = Modifier.padding(vertical = 8.dp),
                     color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                 )
@@ -153,7 +155,7 @@ fun NavigationDrawer(
 
                 // Logout Button
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Filled.ExitToApp, contentDescription = "Logout") },
+                    icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Logout") },
                     label = { Text("Logout") },
                     selected = false,
                     onClick = {
