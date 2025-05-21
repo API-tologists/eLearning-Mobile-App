@@ -15,3 +15,5 @@
 local.properties
 app/src/main/res/values/secrets.xml
 templates/secrets.xml
+
+.\eLearning-Mobile-App\app\src\main\res\values\strings.xml
