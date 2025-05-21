@@ -1,5 +1,6 @@
 package com.example.elearning.viewmodel
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -901,6 +902,7 @@ class CourseViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    @SuppressLint("NewApi")
     private fun generateCertificateNumber(): String {
         val year = java.time.LocalDate.now().year
         val random = (10000..99999).random()

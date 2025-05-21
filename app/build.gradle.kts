@@ -61,6 +61,7 @@ dependencies {
     implementation(libs.androidx.media3.ui)
     implementation(libs.androidx.room.common.jvm)
     implementation(libs.androidx.room.runtime.android)
+    implementation(libs.androidx.navigation.common.android)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

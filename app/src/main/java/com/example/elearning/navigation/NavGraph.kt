@@ -3,7 +3,6 @@ package com.example.elearning.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -18,8 +17,6 @@ import com.example.elearning.viewmodel.CreditCardViewModel
 import com.example.elearning.viewmodel.NoteViewModel
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.remember
-import com.example.elearning.utils.NetworkUtils
-
 
 @Composable
 fun NavGraph(
@@ -31,13 +28,11 @@ fun NavGraph(
 ) {
     val authState by authViewModel.authState.collectAsState()
     val user = (authState as? AuthState.Authenticated)?.user
-    val context = LocalContext.current
 
     NavHost(
         navController = navController,
-        startDestination = when {
-            !NetworkUtils.isNetworkAvailable(context) -> Screen.Downloads.route
-            authState is AuthState.Authenticated -> Screen.Home.route
+        startDestination = when (authState) {
+            is AuthState.Authenticated -> Screen.Home.route
             else -> Screen.Login.route
         }
     ) {
@@ -226,6 +221,39 @@ fun NavGraph(
             ProfileScreen(
                 navController = navController,
                 authViewModel = authViewModel
+            )
+        }
+        composable(
+            route = Screen.Subscription.route,
+            arguments = Screen.Subscription.arguments
+        ) { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: return@composable
+            SubscriptionScreen(
+                navController = navController,
+                courseId = courseId
+            )
+        }
+        composable(
+            route = Screen.PaymentMethod.route,
+            arguments = Screen.PaymentMethod.arguments
+        ) { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: return@composable
+            PaymentMethodScreen(
+                navController = navController,
+                creditCardViewModel = creditCardViewModel,
+                authViewModel = authViewModel,
+                courseViewModel = courseViewModel,
+                courseId = courseId
+            )
+        }
+        composable(
+            route = Screen.SubscriptionSuccess.route,
+            arguments = Screen.SubscriptionSuccess.arguments
+        ) { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: return@composable
+            SubscriptionSuccessScreen(
+                navController = navController,
+                courseId = courseId
             )
         }
         composable(Screen.Downloads.route) {

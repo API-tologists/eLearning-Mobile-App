@@ -3,6 +3,7 @@ package com.example.elearning.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -23,7 +24,6 @@ import com.example.elearning.navigation.Screen
 import com.example.elearning.viewmodel.AuthViewModel
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,22 +130,22 @@ fun NavigationDrawer(
                 )
 
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Filled.Add, contentDescription = "Downloads") },
-                    label = { Text("Downloads") },
+                    icon = { Icon(Icons.Filled.Settings, contentDescription = "Settings") },
+                    label = { Text("Settings") },
                     selected = false,
                     onClick = {
-                        navController.navigate(Screen.Downloads.route)
+                        navController.navigate(Screen.Settings.route)
                         onDrawerStateChange(false)
                     },
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
 
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Filled.Settings, contentDescription = "Settings") },
-                    label = { Text("Settings") },
+                    icon = { Icon(Icons.Filled.Star, contentDescription = "Subscription") },
+                    label = { Text("Subscription") },
                     selected = false,
                     onClick = {
-                        navController.navigate(Screen.Settings.route)
+                        navController.navigate(Screen.Subscription.route)
                         onDrawerStateChange(false)
                     },
                     modifier = Modifier.padding(vertical = 4.dp)
